@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: soiree-event-planner
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+    # Note: On Render free instances, the SQLite database at server/data/soiree.db
+    # is ephemeral between cold restarts. For persistent production data on Render,
+    # attach a Render Persistent Disk mounted at /app/server/data.

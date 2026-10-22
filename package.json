@@ -1,0 +1,20 @@
+{
+  "name": "soiree-fullstack",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -p \"[{name}]\" -n \"server,client\" -c \"cyan,magenta\" \"npm run dev -w @soiree/server\" \"npm run dev -w @soiree/client\"",
+    "build": "npm run build -w @soiree/shared && npm run build -w @soiree/server && npm run build -w @soiree/client",
+    "start": "npm run start -w @soiree/server",
+    "test": "npm run test -w @soiree/server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
