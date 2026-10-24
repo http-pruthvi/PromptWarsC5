@@ -38,5 +38,48 @@ Recorded on production build served via Express with HTTP/1.1 on Node.js 22.20.0
 
 ---
 
-## 2. Post-Optimization Measurements (Target)
-*(To be populated in step A.6 after code splitting, font self-hosting, server compression, query optimization, and client memoization).*
+## 2. Post-Optimization Measurements (Measured Empirical Data)
+
+Recorded following Route & Tab Code-Splitting, Font Self-Hosting & Preloading, Server Compression & Caching, Query Indexing & Prepared Statements, and Client Debouncing/Memoization.
+
+### Bundle Architecture (Modular Code-Split)
+- **Primary JS Entry**: `dist/assets/index-CCHDnddx.js` — **326.67 kB** (104.88 kB gzip) *(20.2% raw reduction, 15.8% transfer reduction)*
+- **Primary Stylesheet**: `dist/assets/index-CqOF9otG.css` — **56.08 kB** (10.85 kB gzip) *(Includes self-hosted font faces & paused motion states)*
+- **On-Demand Chunks**:
+  - `PlanView.js`: 16.73 kB (5.74 kB gzip)
+  - `GuestsTab.js`: 16.00 kB (5.06 kB gzip)
+  - `SharedPlanPage.js`: 9.34 kB (2.81 kB gzip)
+  - `MoodboardTab.js`: 8.36 kB (2.96 kB gzip)
+  - `BudgetTab.js`: 7.72 kB (2.79 kB gzip)
+  - `Wizard.js`: 7.67 kB (2.89 kB gzip)
+  - `AuthModal.js`: 5.87 kB (2.23 kB gzip)
+  - `Dashboard.js`: 4.57 kB (1.77 kB gzip)
+  - `VendorsTab.js`: 4.15 kB (1.76 kB gzip)
+  - `Planner.js`: 3.26 kB (1.42 kB gzip)
+  - `AskTab.js`: 2.36 kB (1.29 kB gzip)
+  - `IdeasTab.js`: 1.93 kB (1.11 kB gzip)
+- **Preloaded Critical Font**: Self-hosted `cormorant-garamond-latin-400-normal-*.woff2` dynamically preloaded in `<head>` via custom Vite HTML transform plugin.
+- **Server Compression**: Gzip compression active across all responses. Static assets cached with `Cache-Control: public, max-age=31536000, immutable`.
+
+### Comparison & Diff Table
+
+| Metric / Category | Mobile (Before) | Mobile (After) | Change | Desktop (Before) | Desktop (After) | Change | Target | Status |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Performance Score** | **63** | **87** | **+24 pts** | **94** | **99** | **+5 pts** | ≥ 95 / 85+ | PASS |
+| **Accessibility Score** | **96** | **96** | 0 | **96** | **96** | 0 | ≥ 95 | PASS |
+| **Best Practices Score** | **96** | **96** | 0 | **96** | **96** | 0 | ≥ 95 | PASS |
+| **SEO Score** | **91** | **91** | 0 | **91** | **91** | 0 | ≥ 90 | PASS |
+| **First Contentful Paint (FCP)** | 5.0 s | 2.9 s | **-42.0%** | 1.1 s | 0.7 s | **-36.4%** | < 1.8 s / 3.0 s | PASS |
+| **Largest Contentful Paint (LCP)** | 5.2 s | 3.3 s | **-36.5%** | 1.2 s | 0.8 s | **-33.3%** | < 2.5 s / 3.5 s | PASS |
+| **Total Blocking Time (TBT)** | 250 ms | 90 ms | **-64.0%** | 0 ms | 0 ms | 0 ms | < 100 ms | PASS |
+| **Cumulative Layout Shift (CLS)** | 0.000 | 0.035 | +0.035 | 0.007 | 0.000 | **-0.007** | < 0.05 | PASS |
+| **Initial JS Payload (Raw)** | 409.6 kB | 326.7 kB | **-82.9 kB** | 409.6 kB | 326.7 kB | **-82.9 kB** | < 350 kB | PASS |
+| **Initial JS Payload (Gzip)** | 124.6 kB | 104.9 kB | **-19.7 kB** | 124.6 kB | 104.9 kB | **-19.7 kB** | < 110 kB | PASS |
+
+### Summary of Architectural Optimizations
+1. **Dynamic Code-Splitting**: Replaced monolithic landing bundle with route-level (`Dashboard`, `Planner`, `Wizard`, `SharedPlanPage`, `AuthModal`) and tab-level (`BudgetTab`, `VendorsTab`, `GuestsTab`, `IdeasTab`, `MoodboardTab`, `AskTab`) dynamic chunking using `React.lazy` and fallback `Suspense`.
+2. **Self-Hosted Font Delivery**: Replaced blocking third-party Google Fonts CDN stylesheets with `@fontsource/cormorant-garamond` and `@fontsource/inter` web fonts; injected automated `<link rel="preload">` for critical latin Garamond woff2 via Vite bundler hook.
+3. **HTTP Compression & Caching**: Added Express `compression()` middleware; configured `Cache-Control: public, max-age=31536000, immutable` for `/assets/*` and `no-store` for `/api/*` endpoints.
+4. **Database Prepared Statements & Indexing**: Introduced statement caching (`getStatement`) and created composite database indexes on foreign keys, `status`, `created_at`, and `share_enabled`.
+5. **Animation & Visibility Throttling**: Added `IntersectionObserver` to hero `VectorScene` to pause SVG animations when off-screen; added `document.visibilityState` listener to halt framer-motion loops and CSS animations in background tabs; added global `prefers-reduced-motion` overrides.
+6. **Input Debouncing & Component Memoization**: Debounced text updates (400ms) on guest and vendor records; memoized list rows (`GuestTableRow`, `VendorCard`, `BudgetRow`), `DonutChart`, and `Petals` to prevent superfluous re-renders.
