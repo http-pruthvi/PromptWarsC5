@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { AlertTriangle, Sparkles, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import type { BudgetRebalanceProposal, Plan } from '@soiree/shared'
+import React, { useEffect, useMemo, useState } from 'react'
+import type { BudgetRebalanceProposal, Currency, Plan } from '@soiree/shared'
 import { api } from '../../lib/api'
 import { compactMoney, money } from '../../lib/utils'
 import { DonutChart, PALETTE } from '../common'
@@ -17,6 +17,53 @@ interface Props {
   toast: (m: string) => void
 }
 
+interface BudgetRowProps {
+  x: Plan['budget'][number]
+  color: string
+  cur?: Currency
+  onEdit: (id: string, key: 'allocated' | 'spent', v: number) => void
+}
+
+const BudgetRow = React.memo(function BudgetRow({ x, color, cur, onEdit }: BudgetRowProps) {
+  const over = x.spent > x.allocated
+  const overAmount = x.spent - x.allocated
+  return (
+    <div className={`row ${over ? 'row-overspent' : ''}`}>
+      <span className="swatch" style={{ background: color }} />
+      <div className="name">
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+          <b>{x.category}</b>
+          {over && (
+            <span className="overspend-badge" title="Category expenditures exceed allocated funds">
+              <AlertTriangle size={11} /> Over by {money(overAmount, cur)}
+            </span>
+          )}
+        </div>
+        <small>{x.note}</small>
+        <div className={`bar ${over ? 'overspent' : ''}`} style={{ marginTop: 8 }}>
+          <i style={{ width: `${x.allocated ? Math.min(100, (x.spent / x.allocated) * 100) : 100}%` }} />
+        </div>
+      </div>
+      <input
+        className="num"
+        type="number"
+        min={0}
+        aria-label={`${x.category} allocated`}
+        value={x.allocated}
+        onChange={(e) => onEdit(x.id, 'allocated', Number(e.target.value))}
+      />
+      <input
+        className="num"
+        type="number"
+        min={0}
+        aria-label={`${x.category} spent`}
+        value={x.spent}
+        onChange={(e) => onEdit(x.id, 'spent', Number(e.target.value))}
+      />
+    </div>
+  )
+})
+
 export default function BudgetTab({
   plan,
   setPlan,
@@ -30,6 +77,16 @@ export default function BudgetTab({
   const diff = b.budget - totalAlloc
   const remaining = b.budget - totalSpent
   const isOver90Percent = totalSpent > 0.9 * b.budget
+
+  const chartData = useMemo(
+    () =>
+      plan.budget.map((x, i) => ({
+        label: x.category,
+        value: x.allocated,
+        color: PALETTE[i % PALETTE.length] ?? '#b88c3c',
+      })),
+    [plan.budget]
+  )
 
   const [showRebalanceModal, setShowRebalanceModal] = useState(false)
   const [proposal, setProposal] = useState<BudgetRebalanceProposal | null>(null)
@@ -124,7 +181,7 @@ export default function BudgetTab({
       </div>
 
       <div className="budget-layout">
-        <DonutChart data={plan.budget.map((x) => ({ label: x.category, value: x.allocated }))} centerLabel="Allocated" centerValue={compactMoney(totalAlloc, cur)} />
+        <DonutChart data={chartData} centerLabel="Allocated" centerValue={compactMoney(totalAlloc, cur)} />
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <h4 style={{ fontFamily: 'var(--serif)', fontSize: 24, margin: 0 }}>Category Breakdown</h4>
@@ -140,45 +197,15 @@ export default function BudgetTab({
 
           <div className="table">
             <div className="row row-head"><span /><span>Category</span><span style={{ textAlign: 'right' }}>Allocated</span><span style={{ textAlign: 'right' }}>Spent</span></div>
-            {plan.budget.map((x, i) => {
-              const over = x.spent > x.allocated
-              const overAmount = x.spent - x.allocated
-              return (
-                <div className={`row ${over ? 'row-overspent' : ''}`} key={x.id}>
-                  <span className="swatch" style={{ background: PALETTE[i % PALETTE.length] }} />
-                  <div className="name">
-                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
-                      <b>{x.category}</b>
-                      {over && (
-                        <span className="overspend-badge" title="Category expenditures exceed allocated funds">
-                          <AlertTriangle size={11} /> Over by {money(overAmount, cur)}
-                        </span>
-                      )}
-                    </div>
-                    <small>{x.note}</small>
-                    <div className={`bar ${over ? 'overspent' : ''}`} style={{ marginTop: 8 }}>
-                      <i style={{ width: `${x.allocated ? Math.min(100, (x.spent / x.allocated) * 100) : 100}%` }} />
-                    </div>
-                  </div>
-                  <input
-                    className="num"
-                    type="number"
-                    min={0}
-                    aria-label={`${x.category} allocated`}
-                    value={x.allocated}
-                    onChange={(e) => onEdit(x.id, 'allocated', Number(e.target.value))}
-                  />
-                  <input
-                    className="num"
-                    type="number"
-                    min={0}
-                    aria-label={`${x.category} spent`}
-                    value={x.spent}
-                    onChange={(e) => onEdit(x.id, 'spent', Number(e.target.value))}
-                  />
-                </div>
-              )
-            })}
+            {plan.budget.map((x, i) => (
+              <BudgetRow
+                key={x.id}
+                x={x}
+                color={PALETTE[i % PALETTE.length]}
+                cur={cur}
+                onEdit={onEdit}
+              />
+            ))}
           </div>
         </div>
       </div>

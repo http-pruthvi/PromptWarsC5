@@ -125,10 +125,28 @@ export function ScrollLotus({ target, size, line }: { target: RefObject<HTMLElem
 /** Bloom that opens and closes on its own (loaders). */
 export function LoopingLotus({ size = 200 }: { size?: number }) {
   const p = useMotionValue(0)
+  const reduce = useReducedMotion()
   useEffect(() => {
-    const c = animate(p, [0, 1, 1, 0], { duration: 3.8, repeat: Infinity, ease: 'easeInOut', times: [0, 0.5, 0.7, 1] })
-    return () => c.stop()
-  }, [p])
+    if (reduce) return
+    let anim: ReturnType<typeof animate> | null = null
+    const start = () => {
+      if (typeof document !== 'undefined' && document.hidden) return
+      anim = animate(p, [0, 1, 1, 0], { duration: 3.8, repeat: Infinity, ease: 'easeInOut', times: [0, 0.5, 0.7, 1] })
+    }
+    const onVisibility = () => {
+      if (document.hidden) {
+        anim?.stop()
+      } else {
+        start()
+      }
+    }
+    start()
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      anim?.stop()
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [p, reduce])
   return <LotusBloom progress={p} size={size} />
 }
 

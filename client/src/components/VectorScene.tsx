@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 /**
  * Hand-built animated procedural SVG hero backdrop:
@@ -19,6 +19,19 @@ const CX = 1130 // lotus centre
 const CY = 470
 
 export function VectorScene({ className = '', mirror = false }: { className?: string; mirror?: boolean }) {
+  const ref = useRef<SVGSVGElement>(null)
+  const [isVisible, setIsVisible] = useState(true)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const obs = new IntersectionObserver(([entry]) => {
+      setIsVisible(entry?.isIntersecting ?? true)
+    }, { threshold: 0.05 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
   const { petalsFar, pearls, drift, sparkles, ribbons } = useMemo(() => {
     const r = rng(7)
     const petalsFar = Array.from({ length: 26 }, (_, i) => ({
@@ -48,7 +61,8 @@ export function VectorScene({ className = '', mirror = false }: { className?: st
 
   return (
     <svg
-      className={`vscene ${className}`}
+      ref={ref}
+      className={`vscene ${className} ${isVisible ? '' : 'is-paused'}`}
       viewBox="0 0 1600 900"
       preserveAspectRatio="xMaxYMid slice"
       role="img"

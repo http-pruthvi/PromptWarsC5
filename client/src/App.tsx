@@ -52,6 +52,15 @@ export default function App() {
       .catch(() => setUser(null))
   }, [])
 
+  // Pause CSS animations when browser tab is inactive to save CPU / battery
+  useEffect(() => {
+    const onVisibility = () => {
+      document.body.classList.toggle('tab-hidden', document.hidden)
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
+
   const toast = useCallback((m: string) => {
     setToastMsg(m)
     window.setTimeout(() => setToastMsg(null), 2600)

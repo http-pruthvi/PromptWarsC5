@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { AlertTriangle, Search, Trash2, Upload, UserPlus, Users, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DietaryOption, Guest, GuestStatus, GuestSummary, Plan } from '@soiree/shared'
 import { api } from '../../lib/api'
 import { compactMoney, money } from '../../lib/utils'
@@ -11,6 +11,92 @@ interface Props {
   plan: Plan
   toast: (m: string) => void
 }
+
+interface GuestRowProps {
+  g: Guest
+  onUpdateImmediate: (id: string, patch: Partial<Guest>) => void
+  onUpdateText: (id: string, patch: Partial<Guest>) => void
+  onDelete: (id: string) => void
+}
+
+const GuestTableRow = React.memo(function GuestTableRow({
+  g,
+  onUpdateImmediate,
+  onUpdateText,
+  onDelete,
+}: GuestRowProps) {
+  return (
+    <tr key={g.id}>
+      <td className="guest-name-cell">
+        <input
+          value={g.name}
+          onChange={(e) => onUpdateText(g.id, { name: e.target.value })}
+          aria-label={`Name for guest ${g.name}`}
+        />
+      </td>
+      <td style={{ textAlign: 'center' }}>
+        <select
+          className="guest-select"
+          style={{ padding: '2px 8px', fontSize: 12 }}
+          value={g.party}
+          onChange={(e) => onUpdateImmediate(g.id, { party: parseInt(e.target.value) || 1 })}
+          aria-label={`Party size for ${g.name}`}
+        >
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+            <option key={num} value={num}>
+              {num}
+            </option>
+          ))}
+        </select>
+      </td>
+      <td>
+        <select
+          className={`guest-status-select status-${g.status}`}
+          value={g.status}
+          onChange={(e) => onUpdateImmediate(g.id, { status: e.target.value as GuestStatus })}
+          aria-label={`RSVP status for ${g.name}`}
+        >
+          <option value="pending">⏳ Pending</option>
+          <option value="attending">✓ Attending</option>
+          <option value="declined">✕ Declined</option>
+        </select>
+      </td>
+      <td>
+        <select
+          className="guest-dietary-select"
+          value={g.dietary}
+          onChange={(e) => onUpdateImmediate(g.id, { dietary: e.target.value as DietaryOption })}
+          aria-label={`Dietary preference for ${g.name}`}
+        >
+          <option value="none">Standard</option>
+          <option value="veg">Vegetarian</option>
+          <option value="vegan">Vegan</option>
+          <option value="jain">Jain</option>
+          <option value="halal">Halal</option>
+          <option value="other">Other</option>
+        </select>
+      </td>
+      <td className="guest-notes-cell">
+        <input
+          placeholder="Add notes..."
+          value={g.notes || ''}
+          onChange={(e) => onUpdateText(g.id, { notes: e.target.value })}
+          aria-label={`Notes for ${g.name}`}
+        />
+      </td>
+      <td style={{ textAlign: 'center' }}>
+        <button
+          className="link-btn"
+          onClick={() => onDelete(g.id)}
+          aria-label={`Remove guest ${g.name}`}
+          style={{ color: '#991b1b', opacity: 0.7 }}
+        >
+          <Trash2 size={15} />
+        </button>
+      </td>
+    </tr>
+  )
+})
 
 export default function GuestsTab({ plan, toast }: Props) {
   const [guests, setGuests] = useState<Guest[]>([])
@@ -30,29 +116,39 @@ export default function GuestsTab({ plan, toast }: Props) {
   const [newDietary, setNewDietary] = useState<DietaryOption>('none')
   const [newNotes, setNewNotes] = useState('')
   const [adding, setAdding] = useState(false)
+  const debounceTimers = useRef<Record<string, number>>({})
 
   const cur = plan.brief.currency
 
-  const loadData = async () => {
-    try {
-      const [gRes, sRes] = await Promise.all([
-        api.plans.listGuests(plan.id),
-        api.plans.getGuestSummary(plan.id),
-      ])
-      setGuests(gRes.guests)
-      setSummary(sRes.summary)
-    } catch {
-      toast('Failed to load guests')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
-    void loadData()
-  }, [plan.id])
+    const controller = new AbortController()
+    setLoading(true)
 
-  const recalculateSummary = (list: Guest[]): GuestSummary => {
+    Promise.all([
+      api.plans.listGuests(plan.id, { signal: controller.signal }),
+      api.plans.getGuestSummary(plan.id, { signal: controller.signal }),
+    ])
+      .then(([gRes, sRes]) => {
+        setGuests(gRes.guests)
+        setSummary(sRes.summary)
+      })
+      .catch((err: any) => {
+        if (err?.name === 'AbortError') return
+        toast('Failed to load guests')
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+
+    return () => {
+      controller.abort()
+      for (const t of Object.values(debounceTimers.current)) {
+        window.clearTimeout(t)
+      }
+    }
+  }, [plan.id, toast])
+
+  const recalculateSummary = useCallback((list: Guest[]): GuestSummary => {
     const countsByStatus = { pending: 0, attending: 0, declined: 0 }
     const countsByDietary = { none: 0, veg: 0, vegan: 0, jain: 0, halal: 0, other: 0 }
     let confirmedHeadcount = 0
@@ -74,9 +170,9 @@ export default function GuestsTab({ plan, toast }: Props) {
       cateringAllocation: cateringAlloc,
       costPerHead,
     }
-  }
+  }, [summary?.cateringAllocation])
 
-  const updGuest = async (id: string, patch: Partial<Guest>) => {
+  const onUpdateImmediate = useCallback(async (id: string, patch: Partial<Guest>) => {
     const prevGuests = guests
     const prevSummary = summary
     const updated = guests.map((g) => (g.id === id ? { ...g, ...patch } : g))
@@ -90,9 +186,31 @@ export default function GuestsTab({ plan, toast }: Props) {
       setSummary(prevSummary)
       toast('Failed to update guest. Changes reverted.')
     }
-  }
+  }, [guests, plan.id, recalculateSummary, summary, toast])
 
-  const delGuest = async (id: string) => {
+  const onUpdateText = useCallback((id: string, patch: Partial<Guest>) => {
+    const prevGuests = guests
+    const prevSummary = summary
+    const updated = guests.map((g) => (g.id === id ? { ...g, ...patch } : g))
+    setGuests(updated)
+    setSummary(recalculateSummary(updated))
+
+    if (debounceTimers.current[id]) {
+      window.clearTimeout(debounceTimers.current[id])
+    }
+
+    debounceTimers.current[id] = window.setTimeout(async () => {
+      try {
+        await api.plans.updateGuest(plan.id, id, patch)
+      } catch {
+        setGuests(prevGuests)
+        setSummary(prevSummary)
+        toast('Failed to update guest. Changes reverted.')
+      }
+    }, 400)
+  }, [guests, plan.id, recalculateSummary, summary, toast])
+
+  const delGuest = useCallback(async (id: string) => {
     const prevGuests = guests
     const prevSummary = summary
     const updated = guests.filter((g) => g.id !== id)
@@ -107,7 +225,7 @@ export default function GuestsTab({ plan, toast }: Props) {
       setSummary(prevSummary)
       toast('Failed to delete guest. Changes reverted.')
     }
-  }
+  }, [guests, plan.id, recalculateSummary, summary, toast])
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -165,17 +283,19 @@ export default function GuestsTab({ plan, toast }: Props) {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [showImportModal, importing])
 
-  const filteredGuests = guests.filter((g) => {
-    if (statusFilter !== 'all' && g.status !== statusFilter) return false
-    if (dietaryFilter !== 'all' && g.dietary !== dietaryFilter) return false
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      const matchName = g.name.toLowerCase().includes(q)
-      const matchNotes = (g.notes || '').toLowerCase().includes(q)
-      if (!matchName && !matchNotes) return false
-    }
-    return true
-  })
+  const filteredGuests = useMemo(() => {
+    return guests.filter((g) => {
+      if (statusFilter !== 'all' && g.status !== statusFilter) return false
+      if (dietaryFilter !== 'all' && g.dietary !== dietaryFilter) return false
+      if (search.trim()) {
+        const q = search.toLowerCase()
+        const matchName = g.name.toLowerCase().includes(q)
+        const matchNotes = (g.notes || '').toLowerCase().includes(q)
+        if (!matchName && !matchNotes) return false
+      }
+      return true
+    })
+  }, [guests, statusFilter, dietaryFilter, search])
 
   const importLineCount = importText
     .split('\n')
@@ -420,75 +540,13 @@ export default function GuestsTab({ plan, toast }: Props) {
               </thead>
               <tbody>
                 {filteredGuests.map((g) => (
-                  <tr key={g.id}>
-                    <td className="guest-name-cell">
-                      <input
-                        value={g.name}
-                        onChange={(e) => updGuest(g.id, { name: e.target.value })}
-                        aria-label={`Name for guest ${g.name}`}
-                      />
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <select
-                        className="guest-select"
-                        style={{ padding: '2px 8px', fontSize: 12 }}
-                        value={g.party}
-                        onChange={(e) => updGuest(g.id, { party: parseInt(e.target.value) || 1 })}
-                        aria-label={`Party size for ${g.name}`}
-                      >
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                          <option key={num} value={num}>
-                            {num}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td>
-                      <select
-                        className={`guest-status-select status-${g.status}`}
-                        value={g.status}
-                        onChange={(e) => updGuest(g.id, { status: e.target.value as GuestStatus })}
-                        aria-label={`RSVP status for ${g.name}`}
-                      >
-                        <option value="pending">⏳ Pending</option>
-                        <option value="attending">✓ Attending</option>
-                        <option value="declined">✕ Declined</option>
-                      </select>
-                    </td>
-                    <td>
-                      <select
-                        className="guest-dietary-select"
-                        value={g.dietary}
-                        onChange={(e) => updGuest(g.id, { dietary: e.target.value as DietaryOption })}
-                        aria-label={`Dietary preference for ${g.name}`}
-                      >
-                        <option value="none">Standard</option>
-                        <option value="veg">Vegetarian</option>
-                        <option value="vegan">Vegan</option>
-                        <option value="jain">Jain</option>
-                        <option value="halal">Halal</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </td>
-                    <td className="guest-notes-cell">
-                      <input
-                        placeholder="Add notes..."
-                        value={g.notes || ''}
-                        onChange={(e) => updGuest(g.id, { notes: e.target.value })}
-                        aria-label={`Notes for ${g.name}`}
-                      />
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <button
-                        className="link-btn"
-                        onClick={() => delGuest(g.id)}
-                        aria-label={`Remove guest ${g.name}`}
-                        style={{ color: '#991b1b', opacity: 0.7 }}
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </td>
-                  </tr>
+                  <GuestTableRow
+                    key={g.id}
+                    g={g}
+                    onUpdateImmediate={onUpdateImmediate}
+                    onUpdateText={onUpdateText}
+                    onDelete={delGuest}
+                  />
                 ))}
               </tbody>
             </table>

@@ -61,8 +61,8 @@ export const api = {
       }),
   },
   plans: {
-    list: () => request<{ plans: PlanSummary[] }>('/api/plans'),
-    get: (id: string) => request<{ plan: Plan }>(`/api/plans/${id}`),
+    list: (options?: RequestInit) => request<{ plans: PlanSummary[]; total?: number; limit?: number; offset?: number }>('/api/plans', options),
+    get: (id: string, options?: RequestInit) => request<{ plan: Plan }>(`/api/plans/${id}`, options),
     create: (brief: Brief) =>
       request<{ plan: Plan }>('/api/plans', {
         method: 'POST',
@@ -101,23 +101,23 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ extra }),
       }),
-    getChat: (planId: string) =>
-      request<{ messages: ChatMessage[] }>(`/api/plans/${planId}/chat`),
+    getChat: (planId: string, options?: RequestInit) =>
+      request<{ messages: ChatMessage[]; total?: number; limit?: number; offset?: number }>(`/api/plans/${planId}/chat`, options),
     sendChat: (planId: string, message: string) =>
       request<{ userMessage: ChatMessage; reply: ChatMessage; ai: boolean }>(`/api/plans/${planId}/chat`, {
         method: 'POST',
         body: JSON.stringify({ message }),
       }),
     getIcsUrl: (planId: string) => `/api/plans/${planId}/export.ics`,
-    getMoodboard: (planId: string) =>
-      request<MoodboardResponse>(`/api/plans/${planId}/moodboard`),
+    getMoodboard: (planId: string, options?: RequestInit) =>
+      request<MoodboardResponse>(`/api/plans/${planId}/moodboard`, options),
     generateMoodboard: (planId: string, extra?: string) =>
       request<MoodboardResponse>(`/api/plans/${planId}/moodboard`, {
         method: 'POST',
         body: JSON.stringify({ extra }),
       }),
-    getShare: (planId: string) =>
-      request<ShareResponse>(`/api/plans/${planId}/share`),
+    getShare: (planId: string, options?: RequestInit) =>
+      request<ShareResponse>(`/api/plans/${planId}/share`, options),
     enableShare: (planId: string) =>
       request<ShareResponse>(`/api/plans/${planId}/share`, {
         method: 'POST',
@@ -126,8 +126,8 @@ export const api = {
       request<{ message: string; shareEnabled: boolean }>(`/api/plans/${planId}/share`, {
         method: 'DELETE',
       }),
-    listGuests: (planId: string) =>
-      request<{ guests: Guest[] }>(`/api/plans/${planId}/guests`),
+    listGuests: (planId: string, options?: RequestInit) =>
+      request<{ guests: Guest[]; total?: number; limit?: number; offset?: number }>(`/api/plans/${planId}/guests`, options),
     addGuest: (planId: string, guest: { name: string; party?: number; status?: GuestStatus; dietary?: DietaryOption; notes?: string }) =>
       request<{ guest: Guest }>(`/api/plans/${planId}/guests`, {
         method: 'POST',
@@ -147,8 +147,8 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ text }),
       }),
-    getGuestSummary: (planId: string) =>
-      request<{ summary: GuestSummary }>(`/api/plans/${planId}/guests/summary`),
+    getGuestSummary: (planId: string, options?: RequestInit) =>
+      request<{ summary: GuestSummary }>(`/api/plans/${planId}/guests/summary`, options),
     rebalanceBudget: (planId: string) =>
       request<{ proposal: BudgetRebalanceProposal; ai: boolean }>(`/api/plans/${planId}/budget/rebalance`, {
         method: 'POST',
@@ -160,7 +160,7 @@ export const api = {
       }),
   },
   public: {
-    getPlan: (token: string) =>
-      request<{ plan: PublicPlanView }>(`/api/public/plans/${token}`),
+    getPlan: (token: string, options?: RequestInit) =>
+      request<{ plan: PublicPlanView }>(`/api/public/plans/${token}`, options),
   },
 }

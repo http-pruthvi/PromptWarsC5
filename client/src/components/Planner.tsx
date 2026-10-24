@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import React, { Suspense, useEffect, useState, useCallback } from 'react'
+import React, { Suspense, useEffect, useState } from 'react'
 import type { EventType, Plan, PlanSummary, User } from '@soiree/shared'
 import { api } from '../lib/api'
 import { VectorScene } from './VectorScene'
@@ -25,27 +25,31 @@ export default function Planner({ presetType, user, onRequireAuth: _onRequireAut
   const [activePlan, setActivePlan] = useState<Plan | null>(null)
   const [loadingPlan, setLoadingPlan] = useState(false)
 
-  // Fetch plans list
-  const loadPlans = useCallback(async () => {
-    setLoadingList(true)
-    try {
-      const res = await api.plans.list()
-      setPlans(res.plans)
-      // If user came to planner with no preset and no active plan, show dashboard
-      if (!presetType && res.plans.length === 0 && !activePlan) {
-        setMode('wizard')
-      }
-    } catch {
-      // User might be new/unauthenticated; default to wizard
-      setPlans([])
-    } finally {
-      setLoadingList(false)
-    }
-  }, [presetType, activePlan])
-
+  // Fetch plans list with AbortController on unmount
   useEffect(() => {
-    void loadPlans()
-  }, [user, loadPlans])
+    const controller = new AbortController()
+    setLoadingList(true)
+
+    api.plans
+      .list({ signal: controller.signal })
+      .then((res) => {
+        setPlans(res.plans)
+        if (!presetType && res.plans.length === 0 && !activePlan) {
+          setMode('wizard')
+        }
+      })
+      .catch((err: any) => {
+        if (err?.name === 'AbortError') return
+        setPlans([])
+      })
+      .finally(() => {
+        setLoadingList(false)
+      })
+
+    return () => {
+      controller.abort()
+    }
+  }, [user, presetType, activePlan])
 
   // Open an existing plan
   const handleOpenPlan = async (planId: string) => {
@@ -115,7 +119,7 @@ export default function Planner({ presetType, user, onRequireAuth: _onRequireAut
                     onDone={(p) => {
                       setActivePlan(p)
                       setMode('plan')
-                      void loadPlans()
+                      api.plans.list().then((r) => setPlans(r.plans)).catch(() => {})
                       toast('Your plan is ready ✨')
                     }}
                   />

@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from 'framer-motion'
-import { useMemo } from 'react'
+import React, { useMemo } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
 
 export const PALETTE = ['#c4a05a', '#d6a3a9', '#a98ba5', '#5b3f55', '#e8d6a8', '#b88a8f', '#8f7a9c', '#c9a98a', '#9fb3a0']
@@ -46,7 +46,8 @@ export function spotlight(e: MouseEvent<HTMLElement>) {
   e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`)
 }
 
-export function Petals({ count = 16 }: { count?: number }) {
+export const Petals = React.memo(function Petals({ count = 16 }: { count?: number }) {
+  const reduce = useReducedMotion()
   const petals = useMemo(
     () =>
       Array.from({ length: count }, (_, i) => ({
@@ -59,6 +60,9 @@ export function Petals({ count = 16 }: { count?: number }) {
       })),
     [count],
   )
+
+  if (reduce) return null
+
   return (
     <div className="petals" aria-hidden>
       {petals.map((p) => (
@@ -77,9 +81,9 @@ export function Petals({ count = 16 }: { count?: number }) {
       ))}
     </div>
   )
-}
+})
 
-export function DonutChart({
+export const DonutChart = React.memo(function DonutChart({
   data,
   centerLabel,
   centerValue,
@@ -128,7 +132,7 @@ export function DonutChart({
       )}
     </div>
   )
-}
+})
 
 export function Ribbon() {
   return (
