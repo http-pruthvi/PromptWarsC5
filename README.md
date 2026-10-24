@@ -10,11 +10,28 @@
 - **Dynamic Milestones & Timeline**: Lead-time calibrated task deadlines with optimistic completion toggles.
 - **Curated Vendor Management**: Shortlisting, status pipelines (To contact, Contacted, Booked), and custom budget estimates.
 - **Personalised Idea Deck**: Creative themes, ceremonies, menus, entertainment, and guest experience ideas.
+- **AI Moodboard & Palette Engine**: Curated 5-color palettes (hex-validated, click-to-copy), typography pairings, celebration motifs, spatial decor styling, attire notes, and playlist vibes with Gemini JSON mode and deterministic offline fallback.
+- **Shareable Read-Only Plan Links**: 24-character URL-safe public link generator (`/share/:token`) with strict rate limiting, `noindex` SEO privacy, and sanitization that strips confidential budget amounts, private notes, and user identifiers.
+- **Guest List & RSVP Tracker**: Full guest management with party sizes, RSVP states, dietary preferences (veg, vegan, jain, halal), bulk paste import (up to 500 lines), confirmed headcount tracking, capacity overflow alerts, and dynamic catering cost per head.
+- **Overspend Alerts & AI Budget Rebalancer**: Real-time category deficit detection with "Over by ₹X" badges, sticky 90% budget threshold warning banner, and an intelligent proposal-only AI Rebalancer that preserves contingency reserves while redistributing uncommitted headroom to cover actual expenses.
 - **Ask Soirée (AI Event Concierge)**: Context-aware interactive assistant grounded on the event's actual budget, vendors, and schedule.
 - **One-Click Calendar Sync**: Direct RFC 5545 `.ics` export importing all milestone deadlines straight into Google Calendar, Apple Calendar, or Outlook.
 - **Zero-Friction Evaluation**: 1-click **"Continue as Guest"** demo mode allowing judges to test every feature instantly without filling out a signup form.
 - **Procedural Vector Engine**: Fully resolution-independent procedural SVG vector scene and vector kit with zero heavy video dependencies.
 - **Resilient Offline Architecture**: 100% operational with **NO API key required** via an intelligent procedural planning engine.
+
+---
+
+## Visual Showcase & Screenshots
+
+| View | Description | Preview |
+|---|---|---|
+| **Vector Hero & Kit** | Pure SVG procedural animated backdrop with glowing lotus bloom, gold ribbon vectors, and dynamic cursor particles | `[Screenshot: Vector Hero Scene]` |
+| **Event Overview & Budget** | Visual donut allocation charts, real-time expenditure tracking, and sticky overspend alerts | `[Screenshot: Budget & Donut Breakdown]` |
+| **AI Moodboard & Palette** | 5-color animated swatches with click-to-copy hex toast, editorial typography cards, and motif chips | `[Screenshot: Moodboard & Color Palette]` |
+| **Shareable Read-Only Link** | Public celebration page (`#/share/:token`) sanitized to preserve budget confidentiality | `[Screenshot: Public Shared Celebration]` |
+| **Guest List & RSVP Tracker** | Party size tracker, dietary breakdown, headcount overflow alerts, and catering cost per head | `[Screenshot: Guest List & RSVP Tracker]` |
+| **AI Budget Rebalance Modal** | Before vs. after category redistribution proposal protecting contingency reserves | `[Screenshot: AI Budget Rebalancing Modal]` |
 
 ---
 
@@ -71,17 +88,18 @@ soiree/
 │   │   │   ├── Landing.tsx     # Landing page with hero, bento features, occasions
 │   │   │   ├── Dashboard.tsx   # Saved plans management ("My Plans")
 │   │   │   ├── Planner.tsx     # 3-step event wizard with VectorScene backdrop
-│   │   │   ├── PlanView.tsx    # Plan overview, budget, timeline, vendors, ideas, chat
+│   │   │   ├── PlanView.tsx    # Plan overview, budget, timeline, vendors, guests, moodboard, chat
+│   │   │   ├── SharedPlanPage.tsx # Public read-only celebration link view (#/share/:token)
 │   │   │   ├── AuthModal.tsx   # Sign in, registration, and 1-click guest access
-│   │   │   └── common.tsx      # GlassCard, SectionTitle, Badge, and shared UI primitives
+│   │   │   └── common.tsx      # DonutChart, Stat, and shared UI primitives
 │   │   ├── lib/                # api.ts (typed fetch wrapper), utils.ts
 │   │   └── index.css           # Luxury editorial styling (cream, blush, mauve, gold)
 │   └── vite.config.ts          # Dev proxy (/api -> http://localhost:4000)
 ├── server/                     # Node.js + Express + TypeScript backend
 │   ├── src/
-│   │   ├── db/                 # better-sqlite3 connection & schema migrations
-│   │   ├── middleware/         # JWT auth, cookie management, errorHandler
-│   │   ├── routes/             # auth, plans, health routers
+│   │   ├── db/                 # better-sqlite3 connection & safe schema migrations
+│   │   ├── middleware/         # JWT auth, cookie management, errorHandler, rate-limiters
+│   │   ├── routes/             # auth, plans, public, health routers
 │   │   ├── services/           # Gemini AI service, offline generator, ics export
 │   │   ├── app.ts              # Express application configuration
 │   │   └── index.ts            # Server entrypoint with production secret validation
@@ -139,18 +157,23 @@ Open your browser to:
 
 ---
 
-## Judge / Evaluation Quickstart
+## Database Schema & Safe Migration Rules
 
-1. Launch the app with `npm run dev`.
-2. On the landing page, click **"Start Planning"** or select any occasion (Wedding, Milestone Birthday, Community Gathering).
-3. Click **"Continue as Guest"** for instant 1-click evaluation access without filling out registration credentials.
-4. Fill in the 3-step brief (guest count, budget, location, vibe).
-5. Watch Soirée compose your complete event plan:
-   - **Interactive Budget**: Update actual spend or adjust budget categories.
-   - **Milestone Timeline**: Check off milestone tasks or review lead-times.
-   - **Vendor Pipeline**: Track vendor statuses from "To contact" to "Booked".
-   - **Ask Soirée**: Chat with the concierge grounded in the plan's specific details.
-   - **Export Calendar**: Click "Export .ICS" to download an RFC 5545 calendar import.
+All SQLite migrations adhere strictly to non-destructive schema evolution principles:
+- **New Tables**: Created with `CREATE TABLE IF NOT EXISTS` with foreign keys and `ON DELETE CASCADE`.
+- **New Columns**: Alterations inspect `PRAGMA table_info(tableName)` first, applying `ALTER TABLE` only if the column is absent.
+- **Zero Data Drops**: Never resets, drops, or alters existing rows or columns.
+
+### Tables & Schema
+1. **`users`**: `id PRIMARY KEY`, `email UNIQUE`, `password_hash`, `role`, `created_at`.
+2. **`plans`**: `id PRIMARY KEY`, `user_id REFERENCES users(id) ON DELETE CASCADE`, `type`, `title`, `date`, `guests`, `budget`, `currency`, `city`, `vibe`, `notes`, `summary`, `generated_by`, `share_token TEXT UNIQUE`, `share_enabled INTEGER DEFAULT 0`, `created_at`.
+3. **`budget_items`**: `id PRIMARY KEY`, `plan_id REFERENCES plans(id) ON DELETE CASCADE`, `category`, `allocated`, `spent`, `percent`, `note`.
+4. **`milestones`**: `id PRIMARY KEY`, `plan_id REFERENCES plans(id) ON DELETE CASCADE`, `label`, `detail`, `weeks_before`, `done`.
+5. **`vendors`**: `id PRIMARY KEY`, `plan_id REFERENCES plans(id) ON DELETE CASCADE`, `category`, `name`, `status`, `estimate`, `tips`.
+6. **`ideas`**: `id PRIMARY KEY`, `plan_id REFERENCES plans(id) ON DELETE CASCADE`, `category`, `items` (JSON).
+7. **`chat_messages`**: `id PRIMARY KEY`, `plan_id REFERENCES plans(id) ON DELETE CASCADE`, `sender`, `text`, `created_at`.
+8. **`moodboards`**: `id PRIMARY KEY`, `plan_id UNIQUE REFERENCES plans(id) ON DELETE CASCADE`, `json` (JSON blob of palette, typography, motifs, decor, outfitNotes, playlistVibes), `generated_by`, `created_at`.
+9. **`guests`**: `id PRIMARY KEY`, `plan_id REFERENCES plans(id) ON DELETE CASCADE`, `name`, `party` (1-10), `status` ('pending' | 'attending' | 'declined'), `dietary` ('none' | 'veg' | 'vegan' | 'jain' | 'halal' | 'other'), `notes`, `created_at`.
 
 ---
 
@@ -162,14 +185,14 @@ Soirée is engineered with a **zero-failure architecture** ensuring complete fun
 All Gemini GenAI logic resides exclusively on the server (`server/src/services/ai.ts`). No API keys or credentials are ever exposed to the client or browser environment.
 
 ### 2. JSON-Mode Structured Prompts
-When a Gemini API key is configured, calls use `responseMimeType: 'application/json'` with system instructions enforcing realistic regional budgeting, vendor pricing formulas, and timeline lead times based on the event date.
+When a Gemini API key is configured, calls use `responseMimeType: 'application/json'` with system instructions enforcing realistic regional budgeting, vendor pricing formulas, timeline lead times based on the event date, strict 5-color hex matching (`/^#[0-9a-f]{6}$/i`), and non-destructive budget rebalancing.
 
 ### 3. Graceful Offline Fallback Engine (`server/src/services/generator.ts`)
 If `GEMINI_API_KEY` is omitted, or if Gemini encounters network errors or quota limits:
 1. **Procedural Plan Generation**: Soirée synthesizes complete event plans using industry-standard benchmark distributions tailored to the occasion (Wedding, Milestone Birthday, Community Festival).
-2. **Strict Budget Math**: Budget percentages are mathematically normalized to ensure categories always sum to exactly 100%.
-3. **Calibrated Lead Times**: Milestones calculate optimal lead-time intervals (from 48 weeks down to 1 week) scaled to the exact days remaining until the event date.
-4. **Curated Vendors & Negotiation Tips**: Automatically generates targeted vendor categories with estimated cost ranges and practical booking guidance.
+2. **Deterministic AI Moodboards**: Generates occasion-calibrated 5-color palettes with exact hex codes, font recommendations, motifs, decor suggestions, and playlist vibes derived directly from the plan brief.
+3. **Proportional Budget Rebalancing**: Identifies overspent categories and redistributes uncommitted headroom proportionally across non-contingency categories, guaranteeing that no category drops below actual spend, the contingency row remains untouched, and the sum strictly equals the total plan budget.
+4. **Calibrated Lead Times**: Milestones calculate optimal lead-time intervals (from 48 weeks down to 1 week) scaled to the exact days remaining until the event date.
 5. **Deterministic Event Concierge**: Interactive chat falls back to heuristic domain knowledge, providing relevant advice on budget optimization, timelines, and vendor coordination without external API dependencies.
 
 ---
@@ -201,18 +224,19 @@ Run the full integration test suite with Vitest:
 npm test
 ```
 
-### Test Suite Highlights:
+### Test Suite Highlights (49 Integration Tests):
 - **Zero Production DB Side-Effects**: Tests use an isolated temporary SQLite database file (`soiree-test-*.db`) in the OS temp directory, created and cleaned up before and after runs.
-- **Authentication Flow**: Account registration, duplicate prevention, password hashing with scrypt, 1-click guest access, session verification (`/auth/me`), and logout.
-- **Offline Event Generation**: Full plan creation without Gemini credentials, validating 100% budget math, timeline scaling, vendor allocation, and creative ideas.
-- **Data Isolation & Access Control**: Verifies that User A cannot read, modify, or delete plans belonging to User B (strict 404 enforcement).
-- **Cascade Deletes**: Confirms that deleting a plan cleanly cascades to child milestones, budget items, vendors, ideas, and chat history.
+- **Authentication & Authorization**: Registration, login, guest mode, session verification, ownership isolation (User B cannot view or edit User A's plans, moodboards, guests, or budgets).
+- **Feature 1 (AI Moodboard & Palette)**: Strict validation of 5-color hex formats, typography vibe, offline generator fallback, and retrieval.
+- **Feature 2 (Shareable Links)**: 24-char URL safe token generation, revocation returning 404, rate limiting, and strict data sanitization (no budget amounts, spent amounts, notes, chat, email, or user IDs exposed).
+- **Feature 3 (Guest List & RSVPs)**: Guest CRUD, party validation (1-10), dietary restrictions, bulk paste import (up to 500 lines), confirmed headcount calculation, and catering cost per head.
+- **Feature 4 (AI Budget Rebalancer)**: Proposal-only endpoint verification, strict conservation of total budget, enforcement of `to >= spent`, untouched contingency reserve, and atomic batch application.
 
 ---
 
 ## REST API Reference
 
-All user-scoped endpoints enforce authentication via an `httpOnly` JWT cookie (`soiree_token`).
+All user-scoped endpoints enforce authentication via an `httpOnly` JWT cookie (`soiree_token`). Public routes are rate-limited.
 
 | Method | Endpoint | Description |
 |---|---|---|
@@ -226,11 +250,25 @@ All user-scoped endpoints enforce authentication via an `httpOnly` JWT cookie (`
 | `GET` | `/api/plans/:id` | Fetch full plan details (budget, milestones, vendors, ideas) |
 | `DELETE` | `/api/plans/:id` | Delete plan and cascade remove all related entities |
 | `PATCH` | `/api/plans/:id/budget/:itemId` | Update budget allocation and spent amounts |
+| `POST` | `/api/plans/:id/budget/rebalance` | **Feature 4**: Generate AI/offline budget rebalance proposal (no DB write) |
+| `POST` | `/api/plans/:id/budget/apply` | **Feature 4**: Apply rebalanced budget allocations in an atomic transaction |
 | `PATCH` | `/api/plans/:id/milestones/:id` | Toggle milestone completion status |
 | `POST` | `/api/plans/:id/vendors` | Add a new vendor category to the plan |
 | `PATCH` | `/api/plans/:id/vendors/:id` | Update vendor name, status, estimate, tips |
 | `DELETE` | `/api/plans/:id/vendors/:id` | Remove a vendor from the plan |
 | `POST` | `/api/plans/:id/ideas/regenerate` | Regenerate ideas with optional steering text prompt |
+| `GET` | `/api/plans/:id/moodboard` | **Feature 1**: Retrieve generated moodboard & palette |
+| `POST` | `/api/plans/:id/moodboard` | **Feature 1**: Generate or regenerate moodboard with optional steering |
+| `GET` | `/api/plans/:id/share` | **Feature 2**: Retrieve shareable public link status |
+| `POST` | `/api/plans/:id/share` | **Feature 2**: Generate / enable 24-char URL-safe share token |
+| `DELETE` | `/api/plans/:id/share` | **Feature 2**: Revoke public share link |
+| `GET` | `/api/public/plans/:token` | **Feature 2**: Public sanitized read-only view (rate-limited, no budget/PII) |
+| `GET` | `/api/plans/:id/guests` | **Feature 3**: List all guests for the celebration plan |
+| `POST` | `/api/plans/:id/guests` | **Feature 3**: Add new guest (party 1-10, dietary, status) |
+| `PATCH` | `/api/plans/:id/guests/:guestId` | **Feature 3**: Update guest party, status, dietary, notes |
+| `DELETE` | `/api/plans/:id/guests/:guestId` | **Feature 3**: Remove guest from celebration |
+| `POST` | `/api/plans/:id/guests/import` | **Feature 3**: Bulk paste import guest names (max 500 lines) |
+| `GET` | `/api/plans/:id/guests/summary` | **Feature 3**: Get RSVP summary, confirmed headcount, and catering cost per head |
 | `GET` | `/api/plans/:id/chat` | Retrieve persistent chat message history |
 | `POST` | `/api/plans/:id/chat` | Send question to event assistant and persist response |
 | `GET` | `/api/plans/:id/export.ics` | Download standard RFC 5545 iCalendar file |
@@ -253,3 +291,4 @@ All user-scoped endpoints enforce authentication via an `httpOnly` JWT cookie (`
 
 ## License
 MIT License. Built for PromptWars Challenge 5.
+

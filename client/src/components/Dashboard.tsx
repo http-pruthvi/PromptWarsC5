@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { CalendarDays, MapPin, Plus, Sparkles, Trash2, Users, ArrowRight } from 'lucide-react'
 import type { PlanSummary } from '@soiree/shared'
 import { compactMoney, fmtDate } from '../lib/utils'
+import { LoopingLotus } from './Vectors'
 
 interface Props {
   plans: PlanSummary[]
@@ -36,9 +37,9 @@ export function Dashboard({ plans, loading, onOpen, onDelete, onNew }: Props) {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px 0' }}>
-          <div className="orbit" style={{ margin: '0 auto 16px' }}><i /><i /><i /></div>
-          <p style={{ color: 'var(--muted)' }}>Retrieving your celebrations…</p>
+        <div style={{ display: 'grid', placeItems: 'center', minHeight: 220, padding: '40px 0' }} role="status" aria-label="Retrieving celebrations">
+          <LoopingLotus />
+          <p style={{ color: 'var(--muted)', marginTop: 14, fontSize: 14 }}>Retrieving your celebrations…</p>
         </div>
       ) : plans.length === 0 ? (
         <motion.div

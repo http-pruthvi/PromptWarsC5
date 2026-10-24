@@ -89,6 +89,16 @@ export function PlanView({ plan, setPlan, onNew, onBackToDashboard, toast }: Pro
     toast('Share link copied to clipboard!')
   }
 
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showShareModal) {
+        setShowShareModal(false)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [showShareModal])
+
   // Optimistic milestone toggle
   const toggleMilestone = async (id: string) => {
     const m = plan.timeline.find((x) => x.id === id)
@@ -465,6 +475,16 @@ function BudgetTab({
     }
   }
 
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showRebalanceModal && !applying) {
+        setShowRebalanceModal(false)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [showRebalanceModal, applying])
+
   return (
     <>
       {/* Sticky Alert Banner when Total Spent exceeds 90% */}
@@ -752,11 +772,18 @@ function VendorsTab({ plan, setPlan, toast }: { plan: Plan; setPlan: Props['setP
 
   return (
     <>
-      <div className="vendor-grid">
-        {plan.vendors.map((v) => (
-          <motion.div layout className="vendor" key={v.id}>
-            <div className="vendor-top">
-              <h4>{v.category}</h4>
+      {plan.vendors.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--muted)', background: 'rgba(255,255,255,0.7)', borderRadius: 20, border: '1px solid var(--line)', marginBottom: 20 }}>
+          <Store size={36} style={{ color: 'var(--gold)', margin: '0 auto 12px', opacity: 0.7 }} />
+          <p style={{ fontWeight: 600, fontSize: 16, color: 'var(--ink)', marginBottom: 4 }}>No vendors added yet</p>
+          <p style={{ fontSize: 13.5 }}>Add your first vendor category below (e.g. Catering, Photography, Floral Decor).</p>
+        </div>
+      ) : (
+        <div className="vendor-grid">
+          {plan.vendors.map((v) => (
+            <motion.div layout className="vendor" key={v.id}>
+              <div className="vendor-top">
+                <h4>{v.category}</h4>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 <button
                   className={`status ${v.status}`}
@@ -796,6 +823,7 @@ function VendorsTab({ plan, setPlan, toast }: { plan: Plan; setPlan: Props['setP
           </motion.div>
         ))}
       </div>
+      )}
       <form className="vendor-add" onSubmit={add}>
         <input
           className="input"
@@ -1356,6 +1384,16 @@ function GuestsTab({ plan, toast }: { plan: Plan; toast: Props['toast'] }) {
       setImporting(false)
     }
   }
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showImportModal && !importing) {
+        setShowImportModal(false)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [showImportModal, importing])
 
   const filteredGuests = guests.filter((g) => {
     if (statusFilter !== 'all' && g.status !== statusFilter) return false

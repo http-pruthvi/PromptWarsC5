@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import { Dashboard } from './Dashboard'
 import { PlanView } from './PlanView'
 import { VectorScene } from './VectorScene'
+import { LoopingLotus } from './Vectors'
 import { Wizard } from './Wizard'
 
 interface Props {
@@ -86,9 +87,9 @@ export function Planner({ presetType, user, onRequireAuth: _onRequireAuth, toast
       </div>
       <div className="wrap">
         {loadingPlan ? (
-          <div style={{ textAlign: 'center', padding: '120px 0' }}>
-            <div className="orbit" style={{ margin: '0 auto 16px' }}><i /><i /><i /></div>
-            <p style={{ color: 'var(--muted)' }}>Loading your event portfolio…</p>
+          <div style={{ display: 'grid', placeItems: 'center', minHeight: 320, padding: '80px 0' }} role="status" aria-label="Loading event plan">
+            <LoopingLotus />
+            <p style={{ color: 'var(--muted)', marginTop: 14, fontSize: 14 }}>Loading your event portfolio…</p>
           </div>
         ) : (
           <AnimatePresence mode="wait">
