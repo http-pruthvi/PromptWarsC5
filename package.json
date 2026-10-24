@@ -18,6 +18,7 @@
     "test": "npm run test -w @soiree/server"
   },
   "devDependencies": {
-    "concurrently": "^9.1.0"
+    "concurrently": "^9.1.0",
+    "lighthouse": "^13.5.0"
   }
 }
