@@ -95,6 +95,5 @@ CREATE INDEX IF NOT EXISTS idx_vendors_plan ON vendors(plan_id);
 CREATE INDEX IF NOT EXISTS idx_ideas_plan ON idea_groups(plan_id);
 CREATE INDEX IF NOT EXISTS idx_chat_plan ON chat_messages(plan_id);
 CREATE INDEX IF NOT EXISTS idx_moodboards_plan ON moodboards(plan_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_plans_share_token ON plans(share_token);
 CREATE INDEX IF NOT EXISTS idx_guests_plan ON guests(plan_id);
 `

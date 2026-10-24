@@ -33,16 +33,19 @@ export function initDb(customPath?: string): Database.Database {
 }
 
 function runMigrations(db: Database.Database) {
+  const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='plans'").all()
+  if (tables.length === 0) return
+
   const planCols = db.pragma('table_info(plans)') as Array<{ name: string }>
   const planColNames = new Set(planCols.map((c) => c.name))
 
   if (!planColNames.has('share_token')) {
     db.exec('ALTER TABLE plans ADD COLUMN share_token TEXT')
-    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_plans_share_token ON plans(share_token)')
   }
   if (!planColNames.has('share_enabled')) {
     db.exec('ALTER TABLE plans ADD COLUMN share_enabled INTEGER NOT NULL DEFAULT 0')
   }
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_plans_share_token ON plans(share_token)')
 }
 
 export function getDb(): Database.Database {
