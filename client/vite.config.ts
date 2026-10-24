@@ -12,6 +12,29 @@ export default defineConfig({
       brotliSize: true,
       open: false,
     }),
+    {
+      name: 'font-preload',
+      transformIndexHtml(_html, ctx) {
+        if (!ctx.bundle) return []
+        const tags = []
+        for (const fileName of Object.keys(ctx.bundle)) {
+          if (fileName.includes('cormorant-garamond-latin-600-normal') && fileName.endsWith('.woff2')) {
+            tags.push({
+              tag: 'link',
+              attrs: {
+                rel: 'preload',
+                href: `/${fileName}`,
+                as: 'font',
+                type: 'font/woff2',
+                crossorigin: 'anonymous',
+              },
+              injectTo: 'head' as const,
+            })
+          }
+        }
+        return tags
+      },
+    },
   ],
   resolve: {
     alias: {

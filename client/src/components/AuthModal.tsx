@@ -10,7 +10,7 @@ interface Props {
   initialMode?: 'login' | 'register'
 }
 
-export function AuthModal({ onSuccess, onClose, initialMode = 'login' }: Props) {
+export default function AuthModal({ onSuccess, onClose, initialMode = 'login' }: Props) {
   const [mode, setMode] = useState<'login' | 'register'>(initialMode)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://unpkg.com/knip@5/overview/config.schema.json",
+  "workspaces": {
+    ".": {
+      "ignoreDependencies": ["lighthouse"]
+    },
+    "client": {
+      "entry": ["index.html", "src/components/tabs/*.tsx"]
+    }
+  },
+  "ignoreExportsUsedInFile": true
+}

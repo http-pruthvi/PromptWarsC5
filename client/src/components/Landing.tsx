@@ -3,7 +3,7 @@ import {
   ArrowRight, CalendarCheck, Check, Gem, PiggyBank, Sparkles, Store,
 } from 'lucide-react'
 import { useRef } from 'react'
-import type { EventType } from '../types'
+import type { EventType } from '@soiree/shared'
 import { DonutChart, PALETTE, Reveal, Ribbon, spotlight } from './common'
 import { VectorScene } from './VectorScene'
 import {
@@ -27,7 +27,7 @@ const lineVariants = {
   show: (i: number) => ({ y: 0, transition: { duration: 1.1, delay: 0.25 + i * 0.14, ease: [0.22, 1, 0.36, 1] as const } }),
 }
 
-export function Hero({ onStart }: Props) {
+function Hero({ onStart }: Props) {
   const ref = useRef<HTMLElement>(null)
   const reduce = useReducedMotion()
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] })
@@ -117,7 +117,7 @@ export function Hero({ onStart }: Props) {
   )
 }
 
-export function Marquee() {
+function Marquee() {
   const items = [...MARQUEE, ...MARQUEE]
   return (
     <div className="marquee" aria-hidden>
@@ -139,7 +139,7 @@ const FEATURES: Array<{ icon: IconName; title: string; text: string }> = [
   { icon: 'export', title: 'Share & export', text: 'Print a clean plan, download a calendar file, and keep everything saved privately in your browser.' },
 ]
 
-export function Features() {
+function Features() {
   return (
     <section className="section" id="features">
       <Parallax className="deco-r" speed={50}><Pearls size={150} /></Parallax>
@@ -166,7 +166,7 @@ export function Features() {
   )
 }
 
-export function HowItWorks() {
+function HowItWorks() {
   const ref = useRef<HTMLElement>(null)
   const steps = [
     { t: 'Share the occasion', p: 'Pick wedding, birthday or community event, then add date, guests, budget, city and the vibe you imagine.' },
@@ -194,7 +194,7 @@ export function HowItWorks() {
   )
 }
 
-export function Occasions({ onStart }: Props) {
+function Occasions({ onStart }: Props) {
   const cards: Array<{ type: EventType; title: string; text: string; bg: string; tags: string[] }> = [
     { type: 'wedding', title: 'Weddings', text: 'Multi-day celebrations with rituals, guests and vendors to coordinate.', bg: 'bg-wed', tags: ['Venue', 'Catering', 'Sangeet', 'Stay'] },
     { type: 'birthday', title: 'Birthdays', text: 'Milestone parties and surprises with games, cake and unforgettable moments.', bg: 'bg-bday', tags: ['Theme', 'Cake', 'Games', 'Favours'] },
@@ -225,7 +225,7 @@ export function Occasions({ onStart }: Props) {
   )
 }
 
-export function Preview({ onStart }: Props) {
+function Preview({ onStart }: Props) {
   const data = [
     { label: 'Venue & Decor', value: 28 },
     { label: 'Catering', value: 30 },
@@ -290,7 +290,7 @@ export function Preview({ onStart }: Props) {
   )
 }
 
-export function FinalCta({ onStart }: Props) {
+function FinalCta({ onStart }: Props) {
   return (
     <section className="cta">
       <div className="hero-media" aria-hidden><VectorScene mirror /></div>
@@ -317,7 +317,7 @@ function FooterLotus() {
   )
 }
 
-export function Footer() {
+function Footer() {
   return (
     <footer className="footer">
       <FooterLotus />

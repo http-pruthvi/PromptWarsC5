@@ -17,9 +17,9 @@ declare global {
 
 export const DEFAULT_JWT_SECRET = 'soiree-default-jwt-secret-do-not-use-in-real-prod'
 const JWT_SECRET = process.env.JWT_SECRET || DEFAULT_JWT_SECRET
-export const COOKIE_NAME = 'soiree_token'
+const COOKIE_NAME = 'soiree_token'
 
-export function signToken(user: AuthenticatedUser): string {
+function signToken(user: AuthenticatedUser): string {
   return jwt.sign(
     { id: user.id, email: user.email, isGuest: user.isGuest },
     JWT_SECRET,
@@ -67,7 +67,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
+function optionalAuth(req: Request, _res: Response, next: NextFunction) {
   const token = req.cookies?.[COOKIE_NAME]
   if (token) {
     try {

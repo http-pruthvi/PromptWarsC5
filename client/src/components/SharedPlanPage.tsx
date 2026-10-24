@@ -12,7 +12,7 @@ interface Props {
   onGoHome: () => void
 }
 
-export function SharedPlanPage({ token, onStartPlanning, onGoHome }: Props) {
+export default function SharedPlanPage({ token, onStartPlanning, onGoHome }: Props) {
   const [plan, setPlan] = useState<PublicPlanView | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

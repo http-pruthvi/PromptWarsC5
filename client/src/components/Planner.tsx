@@ -5,9 +5,9 @@ import { api } from '../lib/api'
 import { VectorScene } from './VectorScene'
 import { LoopingLotus } from './Vectors'
 
-const Dashboard = React.lazy(() => import('./Dashboard').then((m) => ({ default: m.Dashboard })))
-const Wizard = React.lazy(() => import('./Wizard').then((m) => ({ default: m.Wizard })))
-const PlanView = React.lazy(() => import('./PlanView').then((m) => ({ default: m.PlanView })))
+const Dashboard = React.lazy(() => import('./Dashboard'))
+const Wizard = React.lazy(() => import('./Wizard'))
+const PlanView = React.lazy(() => import('./PlanView'))
 
 interface Props {
   presetType?: EventType
@@ -18,7 +18,7 @@ interface Props {
 
 type PlannerMode = 'dashboard' | 'wizard' | 'plan'
 
-export function Planner({ presetType, user, onRequireAuth: _onRequireAuth, toast }: Props) {
+export default function Planner({ presetType, user, onRequireAuth: _onRequireAuth, toast }: Props) {
   const [mode, setMode] = useState<PlannerMode>(presetType ? 'wizard' : 'dashboard')
   const [plans, setPlans] = useState<PlanSummary[]>([])
   const [loadingList, setLoadingList] = useState(false)

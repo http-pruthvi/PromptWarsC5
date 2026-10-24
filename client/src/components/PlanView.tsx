@@ -39,7 +39,7 @@ interface Props {
   toast: (m: string) => void
 }
 
-export function PlanView({ plan, setPlan, onNew, onBackToDashboard, toast }: Props) {
+export default function PlanView({ plan, setPlan, onNew, onBackToDashboard, toast }: Props) {
   const [tab, setTab] = useState<Tab>('overview')
   const b = plan.brief
   const cur = b.currency
@@ -413,3 +413,4 @@ export function PlanView({ plan, setPlan, onNew, onBackToDashboard, toast }: Pro
     </div>
   )
 }
+

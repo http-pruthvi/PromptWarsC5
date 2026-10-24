@@ -2,7 +2,7 @@ import { Check } from 'lucide-react'
 import type { Plan } from '@soiree/shared'
 import { addDays, fmtDate, todayISO } from '../../lib/utils'
 
-export const dueDate = (plan: Plan, weeksBefore: number) => addDays(plan.brief.date, -Math.round(weeksBefore * 7))
+const dueDate = (plan: Plan, weeksBefore: number) => addDays(plan.brief.date, -Math.round(weeksBefore * 7))
 
 export function Stat({ label, value, sub, pct }: { label: string; value: string; sub: string; pct: number }) {
   return (

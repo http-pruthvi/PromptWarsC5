@@ -24,7 +24,7 @@ const briefSchema = z.object({
 })
 
 // Helper to load a full plan by id with ownership check
-export function loadFullPlan(planId: string, userId: string): Plan | null {
+function loadFullPlan(planId: string, userId: string): Plan | null {
   const db = getDb()
   const p = db.prepare(`
     SELECT id, created_at, title, event_type, date, guests, budget, currency, city, vibe, notes, summary, generated_by

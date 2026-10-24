@@ -24,7 +24,7 @@ const DEFAULTS: Record<EventType, { guests: number; budget: number; offset: numb
   community: { guests: 300, budget: 250000, offset: 75, title: '' },
 }
 
-export function Wizard({ initialType, onDone }: { initialType?: EventType; onDone: (p: Plan) => void }) {
+export default function Wizard({ initialType, onDone }: { initialType?: EventType; onDone: (p: Plan) => void }) {
   const first = initialType ?? 'wedding'
   const [step, setStep] = useState(initialType ? 1 : 0)
   const [busy, setBusy] = useState(false)

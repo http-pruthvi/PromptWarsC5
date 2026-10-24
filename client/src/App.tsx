@@ -8,9 +8,9 @@ import type { Route } from './components/Navbar'
 import { Petals, Toast } from './components/common'
 import { LoopingLotus, ScrollVine, VectorDefs } from './components/Vectors'
 
-const Planner = React.lazy(() => import('./components/Planner').then((m) => ({ default: m.Planner })))
-const SharedPlanPage = React.lazy(() => import('./components/SharedPlanPage').then((m) => ({ default: m.SharedPlanPage })))
-const AuthModal = React.lazy(() => import('./components/AuthModal').then((m) => ({ default: m.AuthModal })))
+const Planner = React.lazy(() => import('./components/Planner'))
+const SharedPlanPage = React.lazy(() => import('./components/SharedPlanPage'))
+const AuthModal = React.lazy(() => import('./components/AuthModal'))
 
 interface RouteState {
   route: Route

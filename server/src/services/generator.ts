@@ -17,7 +17,7 @@ export function weeksUntil(dateStr: string, from = new Date()): number {
   return Math.max(0, Math.round(((d.getTime() - from.getTime()) / 86400000 / 7) * 10) / 10)
 }
 
-export function pick<T>(arr: T[], n: number): T[] {
+function pick<T>(arr: T[], n: number): T[] {
   const copy = [...arr]
   for (let i = copy.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
@@ -633,5 +633,4 @@ export function generateOfflineBudgetRebalance(brief: Brief, budget: BudgetItem[
   return { changes, summary }
 }
 
-export const templates = { BUDGET, TIMELINE, VENDORS }
-
+const templates = { BUDGET, TIMELINE, VENDORS }

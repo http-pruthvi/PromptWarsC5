@@ -12,7 +12,7 @@ interface Props {
   onNew: () => void
 }
 
-export function Dashboard({ plans, loading, onOpen, onDelete, onNew }: Props) {
+export default function Dashboard({ plans, loading, onOpen, onDelete, onNew }: Props) {
   const typeLabel: Record<string, string> = {
     wedding: 'Wedding',
     birthday: 'Birthday',
