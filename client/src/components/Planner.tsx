@@ -4,6 +4,7 @@ import type { EventType, Plan, PlanSummary, User } from '@soiree/shared'
 import { api } from '../lib/api'
 import { Dashboard } from './Dashboard'
 import { PlanView } from './PlanView'
+import { VectorScene } from './VectorScene'
 import { Wizard } from './Wizard'
 
 interface Props {
@@ -81,7 +82,7 @@ export function Planner({ presetType, user, onRequireAuth: _onRequireAuth, toast
   return (
     <main className="planner">
       <div className="planner-bg" aria-hidden>
-        <img src="/media/hero-poster.jpg" alt="" />
+        <VectorScene />
       </div>
       <div className="wrap">
         {loadingPlan ? (

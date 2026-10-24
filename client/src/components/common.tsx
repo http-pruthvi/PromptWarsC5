@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from 'framer-motion'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
 
 export const PALETTE = ['#c4a05a', '#d6a3a9', '#a98ba5', '#5b3f55', '#e8d6a8', '#b88a8f', '#8f7a9c', '#c9a98a', '#9fb3a0']
@@ -75,30 +75,6 @@ export function Petals({ count = 16 }: { count?: number }) {
           }}
         />
       ))}
-    </div>
-  )
-}
-
-/** Looping muted video background with poster fallback and reduced-motion support. */
-export function VideoBg({ className = '', playbackRate = 1 }: { className?: string; playbackRate?: number }) {
-  const ref = useRef<HTMLVideoElement>(null)
-  const reduce = useReducedMotion()
-  const [ready, setReady] = useState(false)
-  useEffect(() => {
-    const v = ref.current
-    if (!v || reduce) return
-    v.playbackRate = playbackRate
-    v.play().catch(() => undefined)
-  }, [reduce, playbackRate])
-  return (
-    <div className={`hero-media ${className}`} aria-hidden>
-      <img src="/media/hero-poster.jpg" alt="" style={{ position: 'absolute', inset: 0, opacity: ready ? 0 : 1, transition: 'opacity 1s' }} />
-      {!reduce && (
-        <video ref={ref} autoPlay muted loop playsInline preload="auto" poster="/media/hero-poster.jpg" onPlaying={() => setReady(true)}>
-          <source src="/media/hero.webm" type="video/webm" />
-          <source src="/media/hero.mp4" type="video/mp4" />
-        </video>
-      )}
     </div>
   )
 }

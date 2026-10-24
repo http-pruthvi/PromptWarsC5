@@ -3,22 +3,29 @@ import request from 'supertest'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import os from 'os'
 import { app } from '../src/app.js'
 import { initDb, closeDb } from '../src/db/index.js'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-const TEST_DB = path.resolve(__dirname, '../data/test-soiree.db')
+const TEST_DB = path.resolve(os.tmpdir(), `soiree-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.db`)
+
+function cleanTestDb() {
+  for (const f of [TEST_DB, `${TEST_DB}-wal`, `${TEST_DB}-shm`, `${TEST_DB}-journal`]) {
+    if (fs.existsSync(f)) {
+      try { fs.unlinkSync(f) } catch {}
+    }
+  }
+}
 
 describe('Soirée Fullstack Backend Test Suite', () => {
   beforeAll(() => {
-    if (fs.existsSync(TEST_DB)) fs.unlinkSync(TEST_DB)
+    cleanTestDb()
     initDb(TEST_DB)
   })
 
   afterAll(() => {
     closeDb()
-    if (fs.existsSync(TEST_DB)) fs.unlinkSync(TEST_DB)
+    cleanTestDb()
   })
 
   describe('1. Health Check', () => {

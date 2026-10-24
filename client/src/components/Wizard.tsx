@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { api } from '../lib/api'
 import { todayISO } from '../lib/utils'
 import type { Brief, EventType, Plan } from '@soiree/shared'
+import { FloralCorner, LoopingLotus } from './Vectors'
 
 const TYPES: Array<{ id: EventType; title: string; text: string; icon: typeof Heart }> = [
   { id: 'wedding', title: 'Wedding', text: 'Ceremonies, sangeet, receptions', icon: Heart },
@@ -74,9 +75,11 @@ export function Wizard({ initialType, onDone }: { initialType?: EventType; onDon
 
   return (
     <div className="wizard panel">
+      <FloralCorner pos="tr" size={130} />
+      <FloralCorner pos="bl" size={100} />
       {busy ? (
         <div className="generating" role="status">
-          <div className="orbit"><i /><i /><i /></div>
+          <div style={{ display: 'grid', placeItems: 'center' }}><LoopingLotus size={230} /></div>
           <h3>Composing your plan…</h3>
           <p>Balancing your budget, arranging milestones, and shortlisting vendors.</p>
         </div>

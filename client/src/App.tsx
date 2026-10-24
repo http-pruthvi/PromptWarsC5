@@ -8,6 +8,7 @@ import { Navbar } from './components/Navbar'
 import type { Route } from './components/Navbar'
 import { Planner } from './components/Planner'
 import { Petals, Toast } from './components/common'
+import { ScrollVine, VectorDefs } from './components/Vectors'
 
 const readRoute = (): Route => (window.location.hash.startsWith('#/planner') ? 'planner' : 'home')
 
@@ -80,6 +81,8 @@ export default function App() {
 
   return (
     <>
+      <VectorDefs />
+      <ScrollVine />
       <Petals />
       <Navbar
         route={route}

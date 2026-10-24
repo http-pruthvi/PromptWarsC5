@@ -10,7 +10,11 @@ const __dirname = path.dirname(__filename)
 let dbInstance: Database.Database | null = null
 
 export function initDb(customPath?: string): Database.Database {
-  if (dbInstance && !customPath) return dbInstance
+  if (dbInstance) {
+    if (!customPath) return dbInstance
+    dbInstance.close()
+    dbInstance = null
+  }
 
   const dbPath = customPath || path.resolve(__dirname, '../../data/soiree.db')
   const dir = path.dirname(dbPath)
@@ -23,9 +27,7 @@ export function initDb(customPath?: string): Database.Database {
   db.pragma('foreign_keys = ON')
   db.exec(SCHEMA)
 
-  if (!customPath) {
-    dbInstance = db
-  }
+  dbInstance = db
   return db
 }
 

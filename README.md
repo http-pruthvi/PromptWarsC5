@@ -1,5 +1,5 @@
 # Soirée — GenAI Luxury Event Orchestration & Fullstack Planner
-> **PromptWars Challenge 5 Submission** — A fullstack event planning platform for weddings, milestone birthdays, and community gatherings, powered by Node.js, Express, TypeScript, SQLite, and Google Gemini GenAI.
+> **PromptWars Challenge 5 Submission** — A fullstack event planning platform for weddings, milestone birthdays, and community gatherings, powered by Node.js, Express, TypeScript, SQLite, and Google Gemini GenAI with zero-config offline capability.
 
 ---
 
@@ -13,7 +13,26 @@
 - **Ask Soirée (AI Event Concierge)**: Context-aware interactive assistant grounded on the event's actual budget, vendors, and schedule.
 - **One-Click Calendar Sync**: Direct RFC 5545 `.ics` export importing all milestone deadlines straight into Google Calendar, Apple Calendar, or Outlook.
 - **Zero-Friction Evaluation**: 1-click **"Continue as Guest"** demo mode allowing judges to test every feature instantly without filling out a signup form.
+- **Procedural Vector Engine**: Fully resolution-independent procedural SVG vector scene and vector kit with zero heavy video dependencies.
 - **Resilient Offline Architecture**: 100% operational with **NO API key required** via an intelligent procedural planning engine.
+
+---
+
+## Vector Hero & Vector Kit
+
+Soirée features an ultra-lightweight, resolution-independent procedural vector animation system:
+
+### 1. Vector Hero (`VectorScene.tsx`)
+- **Pure SVG Procedural Backdrop**: Replaces bulky video files with a resolution-independent, hand-crafted vector scene rendered entirely in code.
+- **Layered Visual Elements**: Features a radiant glass lotus bloom, delicate gold wire ribbons, floating glass shards, shimmering pearls, gentle light rays, and drifting celestial particles.
+- **Deterministic Particle RNG**: Uses a seeded pseudo-random number generator so particle coordinates and drifts remain perfectly smooth, predictable, and reproducible across client renders.
+- **Performance Optimized**: Sub-15 KB footprint with zero video decoding overhead, seamless GPU acceleration, and responsive scaling across mobile and desktop viewports.
+
+### 2. Animated Vector Kit (`Vectors.tsx`)
+- **Luxury Editorial SVG Library**: A dedicated suite of bespoke SVG illustrations and micro-animations crafted specifically for luxury celebration planning.
+- **Interactive Floral & Botanical Elements**: Includes `LotusBloom` with animated petal unfolding, `ScrollVine` tracing section transitions, `FloralRing`, and celebration particle bursts.
+- **Celebration Motifs & Occasion Icons**: High-fidelity vector symbols including `ChampagneFlutes`, `Chandelier`, and curated occasion marks (`WeddingIcon`, `BirthdayIcon`, `CommunityIcon`).
+- **Interactive Feedback**: Dynamic stroke-dasharray drawing transitions, hover states, and celestial sparkle accents that respond to user interaction.
 
 ---
 
@@ -23,7 +42,7 @@ The project is structured as a clean **npm workspaces monorepo**:
 
 ```mermaid
 graph TD
-    Client["Client (Vite + React + TypeScript)<br/>Framer Motion, Glass Cards, Video Hero"]
+    Client["Client (Vite + React + TypeScript)<br/>Framer Motion, Glass Cards, Vector Scene & Vector Kit"]
     Server["Server (Node.js + Express + TypeScript)<br/>Zod, Helmet, CORS, Cookie-Parser, Rate-Limit"]
     Shared["Shared (@soiree/shared)<br/>Shared Types, Interfaces & Contracts"]
     DB[("SQLite Database (better-sqlite3)<br/>server/data/soiree.db<br/>WAL Mode & Cascade Deletes")]
@@ -43,21 +62,30 @@ graph TD
 ```
 soiree/
 ├── client/                     # Vite + React + TypeScript frontend
-│   ├── public/media/           # Optimized hero video assets (hero.mp4, hero.webm, poster)
+│   ├── public/                 # Static assets (favicon.svg) - no video media
 │   ├── src/
-│   │   ├── components/         # Landing, Navbar, Dashboard, Wizard, PlanView, AuthModal
+│   │   ├── components/
+│   │   │   ├── VectorScene.tsx # Procedural animated SVG hero backdrop
+│   │   │   ├── Vectors.tsx     # Vector kit (LotusBloom, ScrollVine, Chandelier, etc.)
+│   │   │   ├── Navbar.tsx      # Responsive nav with accessible mobile drawer (<860px)
+│   │   │   ├── Landing.tsx     # Landing page with hero, bento features, occasions
+│   │   │   ├── Dashboard.tsx   # Saved plans management ("My Plans")
+│   │   │   ├── Planner.tsx     # 3-step event wizard with VectorScene backdrop
+│   │   │   ├── PlanView.tsx    # Plan overview, budget, timeline, vendors, ideas, chat
+│   │   │   ├── AuthModal.tsx   # Sign in, registration, and 1-click guest access
+│   │   │   └── common.tsx      # GlassCard, SectionTitle, Badge, and shared UI primitives
 │   │   ├── lib/                # api.ts (typed fetch wrapper), utils.ts
 │   │   └── index.css           # Luxury editorial styling (cream, blush, mauve, gold)
 │   └── vite.config.ts          # Dev proxy (/api -> http://localhost:4000)
 ├── server/                     # Node.js + Express + TypeScript backend
 │   ├── src/
 │   │   ├── db/                 # better-sqlite3 connection & schema migrations
-│   │   ├── middleware/         # JWT auth, cookie management, error handler
+│   │   ├── middleware/         # JWT auth, cookie management, errorHandler
 │   │   ├── routes/             # auth, plans, health routers
 │   │   ├── services/           # Gemini AI service, offline generator, ics export
 │   │   ├── app.ts              # Express application configuration
-│   │   └── index.ts            # Server entrypoint
-│   └── tests/                  # Vitest + supertest integration test suite
+│   │   └── index.ts            # Server entrypoint with production secret validation
+│   └── tests/                  # Vitest + supertest integration test suite (temp SQLite DB)
 ├── shared/                     # Shared TypeScript contracts (@soiree/shared)
 │   └── src/types.ts            # Canonical data types used by client & server
 ├── package.json                # Root workspaces & concurrency scripts
@@ -68,32 +96,44 @@ soiree/
 
 ---
 
-## Quickstart Guide
+## Setup & Quickstart Guide
 
 ### Prerequisites
-- **Node.js**: v18.0.0 or higher
-- **npm**: v9.0.0 or higher
+- **Node.js**: `v18.0.0` or higher
+- **npm**: `v9.0.0` or higher
 
-No external database (Postgres, MySQL) or Docker engine is required for local development. SQLite automatically creates and migrates `server/data/soiree.db` on first run.
+No external database (PostgreSQL, MySQL) or Docker daemon is required for local development. SQLite automatically provisions and migrates the database on startup.
 
 ### 1. Install Dependencies
-Run from the root directory:
+Run from the repository root:
 ```bash
 npm install
 ```
 
-### 2. Configure Environment (Optional)
-Copy the example environment file:
+### 2. Configure Environment Variables
+Copy the example environment template:
 ```bash
 cp .env.example .env
 ```
-> **Note**: An API key is **completely optional**. If `GEMINI_API_KEY` is left blank, Soirée automatically uses its built-in offline intelligent event generator.
+*(On Windows PowerShell: `Copy-Item .env.example .env`)*
+
+Configure variables in `.env` as desired:
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `PORT` | Optional | `4000` | Port for Express API backend |
+| `NODE_ENV` | Optional | `development` | Environment mode (`development`, `production`, `test`) |
+| `JWT_SECRET` | Production only | *Dev fallback* | Secret key for signing `httpOnly` JWT session cookies. In production, startup fails if missing or unchanged from placeholder. |
+| `GEMINI_API_KEY` | Optional | *Empty* | Google Gemini API key. If omitted, Soirée automatically runs the offline planning engine. |
+| `GEMINI_MODEL` | Optional | `gemini-2.5-flash` | Gemini model identifier used for generative queries |
+
+> **Offline Note**: Setting `GEMINI_API_KEY` is **completely optional**. If left blank, Soirée seamlessly uses its built-in offline intelligent event generator.
 
 ### 3. Run Development Server
 ```bash
 npm run dev
 ```
-This runs both the Express backend (`http://localhost:4000`) and the Vite client (`http://localhost:5173`) concurrently.
+This starts both the Express backend (`http://localhost:4000`) and the Vite frontend (`http://localhost:5173`) concurrently.
 Open your browser to:
 **[http://localhost:5173](http://localhost:5173)**
 
@@ -101,42 +141,72 @@ Open your browser to:
 
 ## Judge / Evaluation Quickstart
 
-1. Launch with `npm run dev`.
-2. On the landing page, click **"Start Planning"** or select any occasion (Wedding, Birthday, Community).
-3. The app allows you to **"Continue as Guest"** in 1 click or register an account.
+1. Launch the app with `npm run dev`.
+2. On the landing page, click **"Start Planning"** or select any occasion (Wedding, Milestone Birthday, Community Gathering).
+3. Click **"Continue as Guest"** for instant 1-click evaluation access without filling out registration credentials.
 4. Fill in the 3-step brief (guest count, budget, location, vibe).
-5. Watch Soirée compose your plan with full timeline, budget distribution, vendors, ideas, and interactive chat.
-6. Try ticking a milestone, adjusting budget allocations, chatting with Soirée, and downloading the `.ics` calendar file. Everything is saved in SQLite!
+5. Watch Soirée compose your complete event plan:
+   - **Interactive Budget**: Update actual spend or adjust budget categories.
+   - **Milestone Timeline**: Check off milestone tasks or review lead-times.
+   - **Vendor Pipeline**: Track vendor statuses from "To contact" to "Booked".
+   - **Ask Soirée**: Chat with the concierge grounded in the plan's specific details.
+   - **Export Calendar**: Click "Export .ICS" to download an RFC 5545 calendar import.
 
 ---
 
-## Production Build & Run
+## GenAI Implementation & Offline Fallback Engine
 
-To build all packages with strict TypeScript checks:
+Soirée is engineered with a **zero-failure architecture** ensuring complete functionality whether online or offline:
+
+### 1. Server-Side Execution
+All Gemini GenAI logic resides exclusively on the server (`server/src/services/ai.ts`). No API keys or credentials are ever exposed to the client or browser environment.
+
+### 2. JSON-Mode Structured Prompts
+When a Gemini API key is configured, calls use `responseMimeType: 'application/json'` with system instructions enforcing realistic regional budgeting, vendor pricing formulas, and timeline lead times based on the event date.
+
+### 3. Graceful Offline Fallback Engine (`server/src/services/generator.ts`)
+If `GEMINI_API_KEY` is omitted, or if Gemini encounters network errors or quota limits:
+1. **Procedural Plan Generation**: Soirée synthesizes complete event plans using industry-standard benchmark distributions tailored to the occasion (Wedding, Milestone Birthday, Community Festival).
+2. **Strict Budget Math**: Budget percentages are mathematically normalized to ensure categories always sum to exactly 100%.
+3. **Calibrated Lead Times**: Milestones calculate optimal lead-time intervals (from 48 weeks down to 1 week) scaled to the exact days remaining until the event date.
+4. **Curated Vendors & Negotiation Tips**: Automatically generates targeted vendor categories with estimated cost ranges and practical booking guidance.
+5. **Deterministic Event Concierge**: Interactive chat falls back to heuristic domain knowledge, providing relevant advice on budget optimization, timelines, and vendor coordination without external API dependencies.
+
+---
+
+## Production Build & Execution
+
+To build all packages with strict TypeScript type-checking:
 ```bash
 npm run build
 ```
 
-To run the unified production server (Express serving both the API and client bundle):
+To run the unified production server (Express serving both the API and the compiled client bundle):
 ```bash
 npm start
 ```
-The app will be available at `http://localhost:4000`.
+The application will be accessible at `http://localhost:4000`.
+
+### Production Security Verification
+When running in production (`NODE_ENV=production`):
+- The server checks `JWT_SECRET`. If it is undefined or left as the default placeholder (`soiree-default-jwt-secret-do-not-use-in-real-prod`), the server **safely refuses to start** with a clear diagnostic error message.
+- 5xx errors returned by the API are masked with `"Something went wrong"`, with the full error details and stack traces logged server-side only.
 
 ---
 
 ## Running Automated Tests
 
-Run the backend integration test suite with Vitest:
+Run the full integration test suite with Vitest:
 ```bash
 npm test
 ```
 
-### Test Coverage Highlights:
-- **Authentication Flow**: Registration, duplicate prevention, password hashing, login, 1-click guest access, session verification (`/auth/me`), and logout.
-- **Offline Fallback Engine**: Full event generation without credentials, validating budget math (summing to 100%), timeline scaling, and vendor estimation.
-- **Data Isolation & Security**: User A's plans are strictly isolated from User B (verifying 404 responses for cross-user reads, mutations, and deletes).
-- **Cascade Deletion**: Deleting a plan cleanly cascades to child milestones, budget items, vendors, ideas, and chat messages in SQLite.
+### Test Suite Highlights:
+- **Zero Production DB Side-Effects**: Tests use an isolated temporary SQLite database file (`soiree-test-*.db`) in the OS temp directory, created and cleaned up before and after runs.
+- **Authentication Flow**: Account registration, duplicate prevention, password hashing with scrypt, 1-click guest access, session verification (`/auth/me`), and logout.
+- **Offline Event Generation**: Full plan creation without Gemini credentials, validating 100% budget math, timeline scaling, vendor allocation, and creative ideas.
+- **Data Isolation & Access Control**: Verifies that User A cannot read, modify, or delete plans belonging to User B (strict 404 enforcement).
+- **Cascade Deletes**: Confirms that deleting a plan cleanly cascades to child milestones, budget items, vendors, ideas, and chat history.
 
 ---
 
@@ -168,44 +238,16 @@ All user-scoped endpoints enforce authentication via an `httpOnly` JWT cookie (`
 
 ---
 
-## GenAI Implementation & Offline Fallback
-
-### 1. Server-Side Execution
-All Gemini GenAI logic resides exclusively on the server (`server/src/services/ai.ts`). No API keys or credentials are ever exposed to the client or browser environment.
-
-### 2. JSON-Mode Structured Prompts
-When a Gemini key is present, calls use `responseMimeType: 'application/json'` with system instructions enforcing realistic regional budgeting, vendor pricing formulas, and timeline lead times based on the event date.
-
-### 3. Graceful Normalization & Fallback
-If Gemini encounters network issues, rate limits, or if no key is configured:
-1. Soirée's procedural generator (`server/src/services/generator.ts`) synthesizes complete plans using industry-standard event ratios.
-2. Percentage distributions are normalized to guarantee budget rows sum to 100%.
-3. Milestones are clamped to the exact weeks remaining before the event.
-4. Assistant chat falls back to deterministic expert planning heuristics.
-
----
-
 ## Security & Best Practices
 
-- **Zero Secrets Committed**: Only `.env.example` with empty template values is tracked in git.
-- **Strict Repository Size**: The git-tracked repository footprint is < 3 MB, comfortably below the 10 MB competition limit.
+- **Zero Secrets Committed**: Only `.env.example` with empty template values is tracked in version control.
+- **Production Secret Guard**: Server aborts startup in production if `JWT_SECRET` is unset or equals default.
+- **Production Error Masking**: 5xx exceptions return a generic message to clients while preserving detailed server logs.
+- **Strict Repository Size**: The git-tracked repository footprint is < 3 MB, comfortably below competition thresholds.
 - **HTTP-Only Cookies**: JWT tokens are sealed with `httpOnly`, `sameSite: 'lax'`, preventing XSS token theft.
-- **Zod Input Validation**: Every incoming payload is validated against strict Zod schemas before touching business logic.
+- **Zod Input Validation**: Every incoming payload is validated against strict Zod schemas before reaching business logic.
 - **SQL Injection Prevention**: All SQLite queries use parameterized prepared statements (`better-sqlite3`).
-- **Security Headers & Rate Limiting**: Helmet applies hardened headers; Express Rate Limit protects against brute force and DDoS.
-
----
-
-## Cloud Deployment
-
-A production-ready `Dockerfile` and `render.yaml` are included.
-
-### Deploying to Render
-1. Push this repository to GitHub.
-2. Create a new **Blueprint** service on Render and connect your repository.
-3. Render will automatically read `render.yaml`, execute the build script, and launch the service.
-
-> **Storage Notice**: On free cloud tiers (Render, Heroku, Fly.io), the SQLite database file at `server/data/soiree.db` is ephemeral and resets on cold container restarts. For persistent production deployments, attach a Persistent Disk mounted at `/app/server/data`.
+- **Security Headers & Rate Limiting**: Helmet applies hardened headers; Express Rate Limit protects against abuse.
 
 ---
 
