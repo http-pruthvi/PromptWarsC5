@@ -2,7 +2,7 @@ import crypto from 'crypto'
 import { Router } from 'express'
 import { z } from 'zod'
 import type { Brief, BudgetItem, ChatMessage, DietaryOption, Guest, GuestStatus, GuestSummary, IdeaGroup, Milestone, Plan, PlanSummary, Vendor } from '@soiree/shared'
-import { getDb } from '../db/index.js'
+import { getDb, getStatement } from '../db/index.js'
 import { requireAuth } from '../middleware/auth.js'
 import { askAssistant, generateIdeas, generateMoodboard, generatePlan, rebalanceBudget } from '../services/ai.js'
 import { uid } from '../services/generator.js'
@@ -23,13 +23,19 @@ const briefSchema = z.object({
   notes: z.string().optional().default(''),
 })
 
-// Helper to load a full plan by id with ownership check
+// Lightweight helper to verify plan existence and ownership without loading full relations
+function verifyPlanOwnership(planId: string, userId: string): { id: string } | null {
+  const stmt = getStatement('SELECT id FROM plans WHERE id = ? AND user_id = ?')
+  return (stmt.get(planId, userId) as { id: string } | undefined) ?? null
+}
+
+// Helper to load a full plan by id with ownership check using cached statements
 function loadFullPlan(planId: string, userId: string): Plan | null {
-  const db = getDb()
-  const p = db.prepare(`
+  const planStmt = getStatement(`
     SELECT id, created_at, title, event_type, date, guests, budget, currency, city, vibe, notes, summary, generated_by
     FROM plans WHERE id = ? AND user_id = ?
-  `).get(planId, userId) as any
+  `)
+  const p = planStmt.get(planId, userId) as any
 
   if (!p) return null
 
@@ -45,26 +51,30 @@ function loadFullPlan(planId: string, userId: string): Plan | null {
     notes: p.notes,
   }
 
-  const budgetRows = db.prepare(`
+  const budgetStmt = getStatement(`
     SELECT id, category, allocated, spent, note FROM budget_items WHERE plan_id = ?
-  `).all(planId) as BudgetItem[]
+  `)
+  const budgetRows = budgetStmt.all(planId) as BudgetItem[]
 
-  const milestoneRows = db.prepare(`
+  const milestoneStmt = getStatement(`
     SELECT id, label, detail, weeks_before AS weeksBefore, done FROM milestones WHERE plan_id = ? ORDER BY weeks_before DESC
-  `).all(planId) as Array<{ id: string; label: string; detail: string; weeksBefore: number; done: number }>
+  `)
+  const milestoneRows = milestoneStmt.all(planId) as Array<{ id: string; label: string; detail: string; weeksBefore: number; done: number }>
 
   const timeline: Milestone[] = milestoneRows.map((m) => ({
     ...m,
     done: Boolean(m.done),
   }))
 
-  const vendorRows = db.prepare(`
+  const vendorStmt = getStatement(`
     SELECT id, category, name, status, estimate, tips FROM vendors WHERE plan_id = ?
-  `).all(planId) as Vendor[]
+  `)
+  const vendorRows = vendorStmt.all(planId) as Vendor[]
 
-  const ideaRows = db.prepare(`
+  const ideaStmt = getStatement(`
     SELECT title, items_json FROM idea_groups WHERE plan_id = ?
-  `).all(planId) as Array<{ title: string; items_json: string }>
+  `)
+  const ideaRows = ideaStmt.all(planId) as Array<{ title: string; items_json: string }>
 
   const ideas: IdeaGroup[] = ideaRows.map((g) => ({
     title: g.title,
@@ -84,16 +94,22 @@ function loadFullPlan(planId: string, userId: string): Plan | null {
   }
 }
 
-// GET /api/plans - List user's plans
+// GET /api/plans - List user's plans with pagination
 plansRouter.get('/', (req, res, next) => {
   try {
-    const db = getDb()
-    const rows = db.prepare(`
-      SELECT id, created_at AS createdAt, event_type AS type, title, date, guests, budget, currency, city, summary, generated_by AS generatedBy
-      FROM plans WHERE user_id = ? ORDER BY created_at DESC
-    `).all(req.user!.id) as PlanSummary[]
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 100)
+    const offset = Math.max(parseInt(req.query.offset as string) || 0, 0)
 
-    return res.json({ plans: rows })
+    const countStmt = getStatement('SELECT COUNT(*) as count FROM plans WHERE user_id = ?')
+    const total = (countStmt.get(req.user!.id) as { count: number }).count
+
+    const rowsStmt = getStatement(`
+      SELECT id, created_at AS createdAt, event_type AS type, title, date, guests, budget, currency, city, summary, generated_by AS generatedBy
+      FROM plans WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?
+    `)
+    const rows = rowsStmt.all(req.user!.id, limit, offset) as PlanSummary[]
+
+    return res.json({ plans: rows, total, limit, offset })
   } catch (err) {
     next(err)
   }
@@ -261,6 +277,29 @@ plansRouter.patch('/:id/milestones/:milestoneId', (req, res, next) => {
   }
 })
 
+// GET /api/plans/:id/vendors - List vendors with pagination
+plansRouter.get('/:id/vendors', (req, res, next) => {
+  try {
+    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
+    if (!plan) return res.status(404).json({ error: 'Plan not found' })
+
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 100, 1), 500)
+    const offset = Math.max(parseInt(req.query.offset as string) || 0, 0)
+
+    const countStmt = getStatement('SELECT COUNT(*) as count FROM vendors WHERE plan_id = ?')
+    const total = (countStmt.get(plan.id) as { count: number }).count
+
+    const rowsStmt = getStatement(`
+      SELECT id, category, name, status, estimate, tips FROM vendors WHERE plan_id = ? LIMIT ? OFFSET ?
+    `)
+    const vendors = rowsStmt.all(plan.id, limit, offset) as Vendor[]
+
+    return res.json({ vendors, total, limit, offset })
+  } catch (err) {
+    next(err)
+  }
+})
+
 // POST /api/plans/:id/vendors - Add vendor
 const addVendorSchema = z.object({
   category: z.string().min(1),
@@ -385,19 +424,25 @@ plansRouter.post('/:id/ideas/regenerate', async (req, res, next) => {
   }
 })
 
-// GET /api/plans/:id/chat - Get chat history
+// GET /api/plans/:id/chat - Get chat history with pagination
 plansRouter.get('/:id/chat', (req, res, next) => {
   try {
-    const db = getDb()
-    const plan = db.prepare('SELECT id FROM plans WHERE id = ? AND user_id = ?').get(req.params.id, req.user!.id)
+    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
-    const messages = db.prepare(`
-      SELECT id, role, text, created_at AS createdAt
-      FROM chat_messages WHERE plan_id = ? ORDER BY created_at ASC
-    `).all(req.params.id) as ChatMessage[]
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 100, 1), 500)
+    const offset = Math.max(parseInt(req.query.offset as string) || 0, 0)
 
-    return res.json({ messages })
+    const countStmt = getStatement('SELECT COUNT(*) as count FROM chat_messages WHERE plan_id = ?')
+    const total = (countStmt.get(plan.id) as { count: number }).count
+
+    const rowsStmt = getStatement(`
+      SELECT id, role, text, created_at AS createdAt
+      FROM chat_messages WHERE plan_id = ? ORDER BY created_at ASC LIMIT ? OFFSET ?
+    `)
+    const messages = rowsStmt.all(plan.id, limit, offset) as ChatMessage[]
+
+    return res.json({ messages, total, limit, offset })
   } catch (err) {
     next(err)
   }
@@ -497,7 +542,7 @@ plansRouter.post('/:id/moodboard', async (req, res, next) => {
 // GET /api/plans/:id/moodboard - Fetch saved moodboard
 plansRouter.get('/:id/moodboard', (req, res, next) => {
   try {
-    const plan = loadFullPlan(req.params.id, req.user!.id)
+    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const db = getDb()
@@ -522,7 +567,7 @@ plansRouter.get('/:id/moodboard', (req, res, next) => {
 // POST /api/plans/:id/share - Enable share link and return random 24-char URL-safe token
 plansRouter.post('/:id/share', (req, res, next) => {
   try {
-    const plan = loadFullPlan(req.params.id, req.user!.id)
+    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const db = getDb()
@@ -545,7 +590,7 @@ plansRouter.post('/:id/share', (req, res, next) => {
 // DELETE /api/plans/:id/share - Revoke share link
 plansRouter.delete('/:id/share', (req, res, next) => {
   try {
-    const plan = loadFullPlan(req.params.id, req.user!.id)
+    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const db = getDb()
@@ -565,7 +610,7 @@ plansRouter.delete('/:id/share', (req, res, next) => {
 // GET /api/plans/:id/share - Get share status
 plansRouter.get('/:id/share', (req, res, next) => {
   try {
-    const plan = loadFullPlan(req.params.id, req.user!.id)
+    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const db = getDb()
@@ -600,19 +645,25 @@ const guestImportSchema = z.object({
   text: z.string().max(100000),
 })
 
-// GET /api/plans/:id/guests - List all guests
+// GET /api/plans/:id/guests - List all guests with pagination
 plansRouter.get('/:id/guests', (req, res, next) => {
   try {
-    const plan = loadFullPlan(req.params.id, req.user!.id)
+    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
-    const db = getDb()
-    const rows = db.prepare(`
-      SELECT id, name, party, status, dietary, notes
-      FROM guests WHERE plan_id = ? ORDER BY created_at ASC
-    `).all(plan.id) as Guest[]
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 100, 1), 500)
+    const offset = Math.max(parseInt(req.query.offset as string) || 0, 0)
 
-    return res.json({ guests: rows })
+    const countStmt = getStatement('SELECT COUNT(*) as count FROM guests WHERE plan_id = ?')
+    const total = (countStmt.get(plan.id) as { count: number }).count
+
+    const rowsStmt = getStatement(`
+      SELECT id, name, party, status, dietary, notes
+      FROM guests WHERE plan_id = ? ORDER BY created_at ASC LIMIT ? OFFSET ?
+    `)
+    const rows = rowsStmt.all(plan.id, limit, offset) as Guest[]
+
+    return res.json({ guests: rows, total, limit, offset })
   } catch (err) {
     next(err)
   }
@@ -621,7 +672,7 @@ plansRouter.get('/:id/guests', (req, res, next) => {
 // POST /api/plans/:id/guests - Add a guest
 plansRouter.post('/:id/guests', (req, res, next) => {
   try {
-    const plan = loadFullPlan(req.params.id, req.user!.id)
+    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const parsed = guestCreateSchema.parse(req.body)
@@ -651,7 +702,7 @@ plansRouter.post('/:id/guests', (req, res, next) => {
 // PATCH /api/plans/:id/guests/:guestId - Update guest
 plansRouter.patch('/:id/guests/:guestId', (req, res, next) => {
   try {
-    const plan = loadFullPlan(req.params.id, req.user!.id)
+    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const parsed = guestPatchSchema.parse(req.body)
@@ -686,7 +737,7 @@ plansRouter.patch('/:id/guests/:guestId', (req, res, next) => {
 // DELETE /api/plans/:id/guests/:guestId - Remove guest
 plansRouter.delete('/:id/guests/:guestId', (req, res, next) => {
   try {
-    const plan = loadFullPlan(req.params.id, req.user!.id)
+    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const db = getDb()
@@ -707,7 +758,7 @@ plansRouter.delete('/:id/guests/:guestId', (req, res, next) => {
 // POST /api/plans/:id/guests/import - Bulk import pasted list (one name per line, max 500)
 plansRouter.post('/:id/guests/import', (req, res, next) => {
   try {
-    const plan = loadFullPlan(req.params.id, req.user!.id)
+    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const parsed = guestImportSchema.parse(req.body)
@@ -757,7 +808,7 @@ plansRouter.post('/:id/guests/import', (req, res, next) => {
 // GET /api/plans/:id/guests/summary - Summary stats, confirmed headcount, and catering cost per head
 plansRouter.get('/:id/guests/summary', (req, res, next) => {
   try {
-    const plan = loadFullPlan(req.params.id, req.user!.id)
+    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const db = getDb()

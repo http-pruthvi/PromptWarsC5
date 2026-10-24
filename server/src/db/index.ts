@@ -28,6 +28,7 @@ export function initDb(customPath?: string): Database.Database {
   db.exec(SCHEMA)
   runMigrations(db)
 
+  statementCache.clear()
   dbInstance = db
   return db
 }
@@ -46,6 +47,40 @@ function runMigrations(db: Database.Database) {
     db.exec('ALTER TABLE plans ADD COLUMN share_enabled INTEGER NOT NULL DEFAULT 0')
   }
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_plans_share_token ON plans(share_token)')
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_plans_user ON plans(user_id);
+    CREATE INDEX IF NOT EXISTS idx_plans_created_at ON plans(created_at);
+    CREATE INDEX IF NOT EXISTS idx_plans_share_enabled ON plans(share_enabled);
+    CREATE INDEX IF NOT EXISTS idx_budget_plan ON budget_items(plan_id);
+    CREATE INDEX IF NOT EXISTS idx_budget_category ON budget_items(category);
+    CREATE INDEX IF NOT EXISTS idx_milestones_plan ON milestones(plan_id);
+    CREATE INDEX IF NOT EXISTS idx_milestones_done ON milestones(done);
+    CREATE INDEX IF NOT EXISTS idx_vendors_plan ON vendors(plan_id);
+    CREATE INDEX IF NOT EXISTS idx_vendors_status ON vendors(status);
+    CREATE INDEX IF NOT EXISTS idx_vendors_category ON vendors(category);
+    CREATE INDEX IF NOT EXISTS idx_ideas_plan ON idea_groups(plan_id);
+    CREATE INDEX IF NOT EXISTS idx_chat_plan ON chat_messages(plan_id);
+    CREATE INDEX IF NOT EXISTS idx_chat_created_at ON chat_messages(created_at);
+    CREATE INDEX IF NOT EXISTS idx_moodboards_plan ON moodboards(plan_id);
+    CREATE INDEX IF NOT EXISTS idx_guests_plan ON guests(plan_id);
+    CREATE INDEX IF NOT EXISTS idx_guests_status ON guests(status);
+    CREATE INDEX IF NOT EXISTS idx_guests_dietary ON guests(dietary);
+  `)
+}
+
+const statementCache = new Map<string, Database.Statement>()
+
+/**
+ * Returns a cached prepared statement to avoid re-compiling SQL per request.
+ */
+export function getStatement(sql: string): Database.Statement {
+  let stmt = statementCache.get(sql)
+  if (!stmt) {
+    stmt = getDb().prepare(sql)
+    statementCache.set(sql, stmt)
+  }
+  return stmt
 }
 
 export function getDb(): Database.Database {
@@ -57,7 +92,9 @@ export function getDb(): Database.Database {
 
 export function closeDb() {
   if (dbInstance) {
+    statementCache.clear()
     dbInstance.close()
     dbInstance = null
   }
 }
+

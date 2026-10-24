@@ -882,6 +882,83 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       expect(updatedOverspent.allocated).toBeGreaterThanOrEqual(updatedOverspent.spent)
     })
   })
+
+  describe('9. Server Performance & Efficiency Controls (A.4)', () => {
+    let authCookie: string
+    let planId: string
+
+    beforeAll(async () => {
+      const res = await request(app).post('/api/auth/guest')
+      authCookie = res.headers['set-cookie'][0]
+
+      const planRes = await request(app)
+        .post('/api/plans')
+        .set('Cookie', authCookie)
+        .send({
+          type: 'birthday',
+          title: 'Performance Benchmark Soiree',
+          date: '2027-08-15',
+          guests: 50,
+          budget: 200000,
+          currency: 'INR',
+          city: 'Mumbai',
+        })
+      planId = planRes.body.plan.id
+    })
+
+    it('sets Cache-Control: no-store and ETag on /api routes', async () => {
+      const res = await request(app).get('/api/health')
+      expect(res.headers['cache-control']).toContain('no-store')
+      expect(res.headers['etag']).toBeDefined()
+    })
+
+    it('paginates GET /api/plans with limit, offset and total', async () => {
+      const res = await request(app)
+        .get('/api/plans?limit=1&offset=0')
+        .set('Cookie', authCookie)
+
+      expect(res.status).toBe(200)
+      expect(Array.isArray(res.body.plans)).toBe(true)
+      expect(res.body.limit).toBe(1)
+      expect(res.body.offset).toBe(0)
+      expect(typeof res.body.total).toBe('number')
+      expect(res.body.plans.length).toBeLessThanOrEqual(1)
+    })
+
+    it('paginates GET /api/plans/:id/vendors and supports limit/offset', async () => {
+      const res = await request(app)
+        .get(`/api/plans/${planId}/vendors?limit=2&offset=0`)
+        .set('Cookie', authCookie)
+
+      expect(res.status).toBe(200)
+      expect(Array.isArray(res.body.vendors)).toBe(true)
+      expect(res.body.limit).toBe(2)
+      expect(res.body.offset).toBe(0)
+      expect(typeof res.body.total).toBe('number')
+      expect(res.body.vendors.length).toBeLessThanOrEqual(2)
+    })
+
+    it('paginates GET /api/plans/:id/guests and GET /api/plans/:id/chat', async () => {
+      const guestRes = await request(app)
+        .get(`/api/plans/${planId}/guests?limit=5&offset=0`)
+        .set('Cookie', authCookie)
+
+      expect(guestRes.status).toBe(200)
+      expect(Array.isArray(guestRes.body.guests)).toBe(true)
+      expect(guestRes.body.limit).toBe(5)
+      expect(guestRes.body.offset).toBe(0)
+
+      const chatRes = await request(app)
+        .get(`/api/plans/${planId}/chat?limit=5&offset=0`)
+        .set('Cookie', authCookie)
+
+      expect(chatRes.status).toBe(200)
+      expect(Array.isArray(chatRes.body.messages)).toBe(true)
+      expect(chatRes.body.limit).toBe(5)
+      expect(chatRes.body.offset).toBe(0)
+    })
+  })
 })
+
 
 
