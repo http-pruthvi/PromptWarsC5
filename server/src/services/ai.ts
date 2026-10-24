@@ -1,9 +1,10 @@
-import type { Brief, ChatMessage, IdeaGroup, Moodboard, Plan } from '@soiree/shared'
+import type { Brief, BudgetItem, BudgetRebalanceProposal, ChatMessage, IdeaGroup, Moodboard, Plan } from '@soiree/shared'
 import {
   buildBudget,
   buildTimeline,
   buildVendors,
   generateLocalPlan,
+  generateOfflineBudgetRebalance,
   generateOfflineMoodboard,
   localAnswer,
   localIdeas,
@@ -244,6 +245,161 @@ CRITICAL: "palette" MUST contain exactly 5 colors, and every "hex" MUST be a 6-d
   } catch (err) {
     console.warn('[AI Moodboard] Error in generateMoodboard, using offline fallback:', err)
     return { moodboard: offline, generatedBy: 'offline' }
+  }
+}
+
+export async function rebalanceBudget(
+  brief: Brief,
+  budget: BudgetItem[]
+): Promise<{ proposal: BudgetRebalanceProposal; ai: boolean }> {
+  const offline = generateOfflineBudgetRebalance(brief, budget)
+
+  if (!getApiKey()) {
+    return { proposal: offline, ai: false }
+  }
+
+  try {
+    const isContingency = (cat: string) => cat.toLowerCase().includes('contingency')
+    const cur = brief.currency
+    const totalBudget = brief.budget
+
+    const prompt = `You are an elite event finance consultant for Soirée.
+The client is planning a ${brief.type} in ${brief.city} with a total budget of ${brief.budget} ${cur}.
+Here is the current budget breakdown with verified spend:
+${JSON.stringify(budget.map(b => ({ id: b.id, category: b.category, allocated: b.allocated, spent: b.spent })), null, 2)}
+
+Some categories may have exceeded their allocations. Propose a budget redistribution.
+CRITICAL RULES:
+1. The total of all proposed 'to' amounts across all categories MUST equal exactly ${totalBudget}.
+2. For EVERY category, the new allocation 'to' MUST be greater than or equal to what has already been spent ('spent').
+3. Any category with 'contingency' in the name MUST remain untouched (its 'to' must equal its current 'allocated').
+4. Take funds proportionally from categories that have unspent headroom.
+
+Return JSON in this exact structure:
+{
+  "changes": [
+    { "category": "Category Name", "to": 123456, "reason": "Reason for change" }
+  ],
+  "summary": "Executive summary of why this rebalancing keeps the celebration on budget."
+}`
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${getModel()}:generateContent?key=${getApiKey()}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.2,
+            responseMimeType: 'application/json',
+          },
+        }),
+      }
+    )
+
+    if (!res.ok) {
+      console.warn(`[AI Budget Rebalance] Gemini returned ${res.status}, falling back to offline`)
+      return { proposal: offline, ai: false }
+    }
+
+    const data: any = await res.json()
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+    if (!text) {
+      return { proposal: offline, ai: false }
+    }
+
+    const parsed = JSON.parse(text)
+    if (!parsed || !Array.isArray(parsed.changes)) {
+      return { proposal: offline, ai: false }
+    }
+
+    // Server-side strict validation and clamping
+    const changesMap = new Map<string, { to: number; reason: string }>()
+    for (const c of parsed.changes) {
+      if (typeof c.category === 'string' && typeof c.to === 'number') {
+        changesMap.set(c.category.toLowerCase().trim(), {
+          to: Math.round(c.to),
+          reason: typeof c.reason === 'string' ? c.reason.trim() : '',
+        })
+      }
+    }
+
+    const clampedItems = budget.map((b) => {
+      const contingency = isContingency(b.category)
+      const suggestion = changesMap.get(b.category.toLowerCase().trim())
+      let to = suggestion ? suggestion.to : b.allocated
+      let reason = suggestion?.reason || ''
+
+      // Rule 3: Contingency untouched
+      if (contingency) {
+        to = b.allocated
+        reason = 'Contingency reserve remains untouched as a dedicated emergency cushion.'
+      }
+
+      // Rule 2: Cannot go below spent
+      if (to < b.spent) {
+        to = b.spent
+      }
+
+      return {
+        itemId: b.id,
+        category: b.category,
+        from: b.allocated,
+        spent: b.spent,
+        contingency,
+        to,
+        reason,
+      }
+    })
+
+    // Rule 1: Sum MUST equal brief.budget exactly
+    let currentSum = clampedItems.reduce((s, i) => s + i.to, 0)
+    const diff = totalBudget - currentSum
+
+    if (diff !== 0) {
+      const adjustable = clampedItems
+        .filter((i) => !i.contingency && i.to + diff >= i.spent)
+        .sort((a, b) => (b.to - b.spent) - (a.to - a.spent))
+
+      if (adjustable.length > 0) {
+        adjustable[0].to += diff
+      } else {
+        return { proposal: offline, ai: false }
+      }
+    }
+
+    for (const item of clampedItems) {
+      if (!item.reason) {
+        if (item.contingency) {
+          item.reason = 'Contingency reserve remains untouched as a dedicated emergency cushion.'
+        } else if (item.to > item.from) {
+          item.reason = `Increased allocation by ${money(item.to - item.from, cur)} to cover verified booking expenses.`
+        } else if (item.to < item.from) {
+          item.reason = `Reallocated ${money(item.from - item.to, cur)} from uncommitted headroom.`
+        } else {
+          item.reason = `Preserved target allocation of ${money(item.to, cur)}.`
+        }
+      }
+    }
+
+    const proposal: BudgetRebalanceProposal = {
+      changes: clampedItems.map((i) => ({
+        itemId: i.itemId,
+        category: i.category,
+        from: i.from,
+        to: i.to,
+        reason: i.reason,
+      })),
+      summary: typeof parsed.summary === 'string' && parsed.summary.trim()
+        ? parsed.summary.trim()
+        : offline.summary,
+    }
+
+    return { proposal, ai: true }
+  } catch (err) {
+    console.warn('[AI Budget Rebalance] Error in rebalanceBudget, falling back to offline:', err)
+    return { proposal: offline, ai: false }
   }
 }
 

@@ -740,6 +740,148 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       expect(listRes.body.guests.some((g: any) => g.id === createdGuestId)).toBe(false)
     })
   })
+
+  describe('8. Feature 4: Overspend Alerts & AI Budget Rebalancer Endpoints', () => {
+    let ownerCookie: string
+    let otherCookie: string
+    let planId: string
+    let budgetTotal: number
+    let overspentItemId: string
+    let contingencyItemId: string
+
+    beforeAll(async () => {
+      const ownerRes = await request(app).post('/api/auth/guest')
+      ownerCookie = ownerRes.headers['set-cookie'][0]
+
+      budgetTotal = 2000000
+      const planRes = await request(app)
+        .post('/api/plans')
+        .set('Cookie', ownerCookie)
+        .send({
+          type: 'wedding',
+          title: 'Diya & Neil Heritage Palace Soirée',
+          date: '2027-12-10',
+          guests: 100,
+          budget: budgetTotal,
+          currency: 'INR',
+          city: 'Jaipur',
+          vibe: 'Heritage, Floral, Pastel',
+        })
+
+      const plan = planRes.body.plan
+      planId = plan.id
+
+      // Find an item to artificially overspend and find contingency
+      const decorItem = plan.budget.find((b: any) => !b.category.toLowerCase().includes('contingency'))
+      const contItem = plan.budget.find((b: any) => b.category.toLowerCase().includes('contingency'))
+
+      overspentItemId = decorItem.id
+      contingencyItemId = contItem.id
+
+      // Set decorItem spent to be higher than its allocated amount (overspend by 100,000)
+      await request(app)
+        .patch(`/api/plans/${planId}/budget/${overspentItemId}`)
+        .set('Cookie', ownerCookie)
+        .send({ spent: decorItem.allocated + 100000 })
+
+      const otherRes = await request(app).post('/api/auth/guest')
+      otherCookie = otherRes.headers['set-cookie'][0]
+    })
+
+    it('requires authentication for budget rebalance (401)', async () => {
+      const res = await request(app).post(`/api/plans/${planId}/budget/rebalance`)
+      expect(res.status).toBe(401)
+    })
+
+    it('enforces ownership checks (404 for other user)', async () => {
+      const res = await request(app)
+        .post(`/api/plans/${planId}/budget/rebalance`)
+        .set('Cookie', otherCookie)
+      expect(res.status).toBe(404)
+    })
+
+    it('returns a proposal without writing to the database', async () => {
+      const planBefore = await request(app)
+        .get(`/api/plans/${planId}`)
+        .set('Cookie', ownerCookie)
+
+      const res = await request(app)
+        .post(`/api/plans/${planId}/budget/rebalance`)
+        .set('Cookie', ownerCookie)
+
+      expect(res.status).toBe(200)
+      expect(res.body.proposal).toBeDefined()
+      expect(Array.isArray(res.body.proposal.changes)).toBe(true)
+
+      // Verify NO write occurred on GET
+      const planAfter = await request(app)
+        .get(`/api/plans/${planId}`)
+        .set('Cookie', ownerCookie)
+
+      expect(planAfter.body.plan.budget).toEqual(planBefore.body.plan.budget)
+    })
+
+    it('satisfies all rebalancing rules: total equals budget, to >= spent, contingency untouched', async () => {
+      const res = await request(app)
+        .post(`/api/plans/${planId}/budget/rebalance`)
+        .set('Cookie', ownerCookie)
+
+      expect(res.status).toBe(200)
+      const proposal = res.body.proposal
+      const changes = proposal.changes
+
+      // Rule 1: The total of all proposed 'to' amounts must equal the plan budget
+      const sumProposed = changes.reduce((s: number, c: any) => s + c.to, 0)
+      expect(sumProposed).toBe(budgetTotal)
+
+      // Rule 2: No category goes below what has already been spent
+      for (const change of changes) {
+        expect(change.to).toBeGreaterThanOrEqual(0)
+        expect(change.reason).toBeTruthy()
+      }
+
+      // Check the specifically overspent category
+      const overspentChange = changes.find((c: any) => c.itemId === overspentItemId)
+      expect(overspentChange).toBeDefined()
+      expect(overspentChange.to).toBeGreaterThanOrEqual(overspentChange.from + 100000)
+
+      // Rule 3: The contingency row stays strictly untouched
+      const contChange = changes.find((c: any) => c.itemId === contingencyItemId)
+      expect(contChange).toBeDefined()
+      expect(contChange.to).toBe(contChange.from)
+      expect(contChange.reason).toContain('untouched')
+    })
+
+    it('applies the proposed changes atomically via POST /api/plans/:id/budget/apply', async () => {
+      const rebRes = await request(app)
+        .post(`/api/plans/${planId}/budget/rebalance`)
+        .set('Cookie', ownerCookie)
+
+      const proposal = rebRes.body.proposal
+      const payload = {
+        changes: proposal.changes.map((c: any) => ({ itemId: c.itemId, to: c.to })),
+      }
+
+      const applyRes = await request(app)
+        .post(`/api/plans/${planId}/budget/apply`)
+        .set('Cookie', ownerCookie)
+        .send(payload)
+
+      expect(applyRes.status).toBe(200)
+      expect(Array.isArray(applyRes.body.budget)).toBe(true)
+
+      // Verify the updated plan reflects new allocations
+      const updatedPlan = await request(app)
+        .get(`/api/plans/${planId}`)
+        .set('Cookie', ownerCookie)
+
+      const newSumAllocated = updatedPlan.body.plan.budget.reduce((s: number, b: any) => s + b.allocated, 0)
+      expect(newSumAllocated).toBe(budgetTotal)
+
+      const updatedOverspent = updatedPlan.body.plan.budget.find((b: any) => b.id === overspentItemId)
+      expect(updatedOverspent.allocated).toBeGreaterThanOrEqual(updatedOverspent.spent)
+    })
+  })
 })
 
 

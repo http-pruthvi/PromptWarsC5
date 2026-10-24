@@ -173,4 +173,17 @@ export interface GuestSummary {
   costPerHead: number | null
 }
 
+export interface BudgetRebalanceChange {
+  itemId: string
+  category: string
+  from: number
+  to: number
+  reason: string
+}
+
+export interface BudgetRebalanceProposal {
+  changes: BudgetRebalanceChange[]
+  summary: string
+}
+
 

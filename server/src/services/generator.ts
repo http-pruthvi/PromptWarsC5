@@ -1,4 +1,4 @@
-import type { Brief, BudgetItem, Currency, EventType, IdeaGroup, Milestone, Moodboard, PaletteColor, Plan, Vendor } from '@soiree/shared'
+import type { Brief, BudgetItem, BudgetRebalanceChange, BudgetRebalanceProposal, Currency, EventType, IdeaGroup, Milestone, Moodboard, PaletteColor, Plan, Vendor } from '@soiree/shared'
 
 export const uid = () => Math.random().toString(36).slice(2, 10)
 
@@ -512,6 +512,125 @@ export function generateOfflineMoodboard(brief: Brief, extra?: string): Moodboar
     outfitNotes,
     playlistVibes,
   }
+}
+
+export function generateOfflineBudgetRebalance(brief: Brief, budget: BudgetItem[]): BudgetRebalanceProposal {
+  const totalBudget = brief.budget
+  const cur = brief.currency
+
+  // Identify contingency items
+  const isContingency = (cat: string) => cat.toLowerCase().includes('contingency')
+
+  // Calculate overspent deficit and available headroom across non-contingency items
+  let totalDeficit = 0
+  let totalHeadroom = 0
+
+  const items = budget.map((b) => {
+    const contingency = isContingency(b.category)
+    const spent = b.spent || 0
+    const allocated = b.allocated || 0
+    const overspend = Math.max(0, spent - allocated)
+    const headroom = contingency ? 0 : Math.max(0, allocated - spent)
+    if (!contingency) {
+      totalDeficit += overspend
+      totalHeadroom += headroom
+    }
+    return {
+      itemId: b.id,
+      category: b.category,
+      from: allocated,
+      spent,
+      contingency,
+      overspend,
+      headroom,
+      to: allocated,
+      reason: '',
+    }
+  })
+
+  // Rebalance allocations
+  if (totalDeficit > 0 && totalHeadroom > 0) {
+    // Step 1: For overspent items, increase allocation to at least match spent
+    for (const item of items) {
+      if (!item.contingency && item.overspend > 0) {
+        item.to = item.spent
+      }
+    }
+
+    // Step 2: Deduct proportionally from items with headroom
+    let remainingDeficit = totalDeficit
+    const headroomItems = items.filter((i) => !i.contingency && i.headroom > 0)
+
+    for (let idx = 0; idx < headroomItems.length; idx++) {
+      const item = headroomItems[idx]
+      let share: number
+      if (idx === headroomItems.length - 1) {
+        share = remainingDeficit
+      } else {
+        share = Math.min(item.headroom, Math.round(totalDeficit * (item.headroom / totalHeadroom)))
+      }
+      // Ensure we don't reduce below spent
+      share = Math.min(share, item.from - item.spent)
+      item.to = Math.max(item.spent, item.from - share)
+      remainingDeficit -= (item.from - item.to)
+    }
+  }
+
+  // Ensure contingency stays strictly untouched
+  for (const item of items) {
+    if (item.contingency) {
+      item.to = item.from
+      item.reason = 'Contingency reserve remains untouched as a dedicated emergency cushion.'
+    }
+  }
+
+  // Step 3: Exact sum adjustment to match brief.budget
+  let sumTo = items.reduce((s, i) => s + i.to, 0)
+  const diff = totalBudget - sumTo
+
+  if (diff !== 0) {
+    // Find non-contingency item with greatest headroom / allocation to absorb difference
+    const adjustable = items
+      .filter((i) => !i.contingency && i.to + diff >= i.spent)
+      .sort((a, b) => (b.to - b.spent) - (a.to - a.spent))
+
+    if (adjustable.length > 0) {
+      adjustable[0].to += diff
+    } else {
+      for (const item of items) {
+        if (!item.contingency && item.to + diff >= item.spent) {
+          item.to += diff
+          break
+        }
+      }
+    }
+  }
+
+  // Step 4: Populate user-facing rationale reasons
+  for (const item of items) {
+    if (item.contingency) continue
+    if (item.to > item.from) {
+      item.reason = `Increased allocation by ${money(item.to - item.from, cur)} to cover actual expenditures (${money(item.spent, cur)} spent).`
+    } else if (item.to < item.from) {
+      item.reason = `Reallocated ${money(item.from - item.to, cur)} of uncommitted headroom while maintaining a ${money(item.to - item.spent, cur)} working buffer.`
+    } else {
+      item.reason = `Preserved planned allocation of ${money(item.to, cur)} to match current milestones.`
+    }
+  }
+
+  const changes: BudgetRebalanceChange[] = items.map((i) => ({
+    itemId: i.itemId,
+    category: i.category,
+    from: i.from,
+    to: i.to,
+    reason: i.reason,
+  }))
+
+  const summary = totalDeficit > 0
+    ? `Rebalanced budget across categories to absorb ${money(totalDeficit, cur)} in overspends from actual bookings, protecting your contingency reserve and ensuring every category covers its verified spending.`
+    : `All celebration categories are currently within their target allocations. Buffer headroom has been balanced to preserve financial security.`
+
+  return { changes, summary }
 }
 
 export const templates = { BUDGET, TIMELINE, VENDORS }

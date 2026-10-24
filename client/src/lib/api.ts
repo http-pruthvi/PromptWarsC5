@@ -1,4 +1,4 @@
-import type { Brief, ChatMessage, DietaryOption, Guest, GuestStatus, GuestSummary, IdeaGroup, MoodboardResponse, Plan, PlanSummary, PublicPlanView, ShareResponse, User, Vendor, VendorStatus } from '@soiree/shared'
+import type { Brief, BudgetRebalanceProposal, ChatMessage, DietaryOption, Guest, GuestStatus, GuestSummary, IdeaGroup, MoodboardResponse, Plan, PlanSummary, PublicPlanView, ShareResponse, User, Vendor, VendorStatus } from '@soiree/shared'
 
 export class ApiError extends Error {
   status: number
@@ -149,6 +149,15 @@ export const api = {
       }),
     getGuestSummary: (planId: string) =>
       request<{ summary: GuestSummary }>(`/api/plans/${planId}/guests/summary`),
+    rebalanceBudget: (planId: string) =>
+      request<{ proposal: BudgetRebalanceProposal; ai: boolean }>(`/api/plans/${planId}/budget/rebalance`, {
+        method: 'POST',
+      }),
+    applyRebalance: (planId: string, changes: Array<{ itemId: string; to: number }>) =>
+      request<{ budget: Plan['budget'] }>(`/api/plans/${planId}/budget/apply`, {
+        method: 'POST',
+        body: JSON.stringify({ changes }),
+      }),
   },
   public: {
     getPlan: (token: string) =>

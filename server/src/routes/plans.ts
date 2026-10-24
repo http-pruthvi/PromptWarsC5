@@ -4,7 +4,7 @@ import { z } from 'zod'
 import type { Brief, BudgetItem, ChatMessage, DietaryOption, Guest, GuestStatus, GuestSummary, IdeaGroup, Milestone, Plan, PlanSummary, Vendor } from '@soiree/shared'
 import { getDb } from '../db/index.js'
 import { requireAuth } from '../middleware/auth.js'
-import { askAssistant, generateIdeas, generateMoodboard, generatePlan } from '../services/ai.js'
+import { askAssistant, generateIdeas, generateMoodboard, generatePlan, rebalanceBudget } from '../services/ai.js'
 import { uid } from '../services/generator.js'
 import { buildICS } from '../services/ics.js'
 
@@ -815,6 +815,53 @@ plansRouter.get('/:id/guests/summary', (req, res, next) => {
     }
 
     return res.json({ summary })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// POST /api/plans/:id/budget/rebalance - Returns PROPOSAL only (no database write)
+plansRouter.post('/:id/budget/rebalance', async (req, res, next) => {
+  try {
+    const plan = loadFullPlan(req.params.id, req.user!.id)
+    if (!plan) return res.status(404).json({ error: 'Plan not found' })
+
+    const result = await rebalanceBudget(plan.brief, plan.budget)
+    return res.json(result)
+  } catch (err) {
+    next(err)
+  }
+})
+
+const applyRebalanceSchema = z.object({
+  changes: z.array(z.object({
+    itemId: z.string(),
+    to: z.number().nonnegative(),
+  })).min(1),
+})
+
+// POST /api/plans/:id/budget/apply - Apply the proposed changes in an atomic transaction
+plansRouter.post('/:id/budget/apply', (req, res, next) => {
+  try {
+    const plan = loadFullPlan(req.params.id, req.user!.id)
+    if (!plan) return res.status(404).json({ error: 'Plan not found' })
+
+    const parsed = applyRebalanceSchema.parse(req.body)
+    const db = getDb()
+
+    const applyTransaction = db.transaction(() => {
+      const stmt = db.prepare(`
+        UPDATE budget_items SET allocated = ? WHERE id = ? AND plan_id = ?
+      `)
+      for (const change of parsed.changes) {
+        stmt.run(change.to, change.itemId, plan.id)
+      }
+    })
+
+    applyTransaction()
+
+    const updatedPlan = loadFullPlan(plan.id, req.user!.id)
+    return res.json({ budget: updatedPlan!.budget })
   } catch (err) {
     next(err)
   }
