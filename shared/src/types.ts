@@ -141,3 +141,36 @@ export interface ShareResponse {
   shareEnabled: boolean
 }
 
+export type GuestStatus = 'pending' | 'attending' | 'declined'
+export type DietaryOption = 'none' | 'veg' | 'vegan' | 'jain' | 'halal' | 'other'
+
+export interface Guest {
+  id: string
+  name: string
+  party: number
+  status: GuestStatus
+  dietary: DietaryOption
+  notes: string
+}
+
+export interface GuestSummary {
+  totalGuests: number
+  confirmedHeadcount: number
+  countsByStatus: {
+    pending: number
+    attending: number
+    declined: number
+  }
+  countsByDietary: {
+    none: number
+    veg: number
+    vegan: number
+    jain: number
+    halal: number
+    other: number
+  }
+  cateringAllocation: number
+  costPerHead: number | null
+}
+
+

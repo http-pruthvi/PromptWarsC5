@@ -544,6 +544,202 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       expect(checkRes.body.error).toContain('not found')
     })
   })
+
+  describe('7. Feature 3: Guest List & RSVP Tracker Endpoints', () => {
+    let ownerCookie: string
+    let otherCookie: string
+    let planId: string
+    let createdGuestId: string
+
+    beforeAll(async () => {
+      const ownerRes = await request(app).post('/api/auth/guest')
+      ownerCookie = ownerRes.headers['set-cookie'][0]
+
+      const planRes = await request(app)
+        .post('/api/plans')
+        .set('Cookie', ownerCookie)
+        .send({
+          type: 'wedding',
+          title: 'Kabir & Rhea Royal Rajputana',
+          date: '2027-11-20',
+          guests: 150,
+          budget: 5000000,
+          currency: 'INR',
+          city: 'Udaipur',
+          vibe: 'Royal, Regal, Intimate',
+        })
+      planId = planRes.body.plan.id
+
+      const otherRes = await request(app).post('/api/auth/guest')
+      otherCookie = otherRes.headers['set-cookie'][0]
+    })
+
+    it('requires authentication for guest endpoints (401)', async () => {
+      const getRes = await request(app).get(`/api/plans/${planId}/guests`)
+      expect(getRes.status).toBe(401)
+
+      const postRes = await request(app)
+        .post(`/api/plans/${planId}/guests`)
+        .send({ name: 'Ananya Sharma' })
+      expect(postRes.status).toBe(401)
+
+      const summaryRes = await request(app).get(`/api/plans/${planId}/guests/summary`)
+      expect(summaryRes.status).toBe(401)
+    })
+
+    it('enforces ownership checks (404 for other user)', async () => {
+      const getRes = await request(app)
+        .get(`/api/plans/${planId}/guests`)
+        .set('Cookie', otherCookie)
+      expect(getRes.status).toBe(404)
+
+      const postRes = await request(app)
+        .post(`/api/plans/${planId}/guests`)
+        .set('Cookie', otherCookie)
+        .send({ name: 'Hacker Guest' })
+      expect(postRes.status).toBe(404)
+
+      const importRes = await request(app)
+        .post(`/api/plans/${planId}/guests/import`)
+        .set('Cookie', otherCookie)
+        .send({ text: 'Guest One\nGuest Two' })
+      expect(importRes.status).toBe(404)
+    })
+
+    it('validates guest input (400 for invalid party size or empty name)', async () => {
+      const resEmpty = await request(app)
+        .post(`/api/plans/${planId}/guests`)
+        .set('Cookie', ownerCookie)
+        .send({ name: '   ', party: 2 })
+      expect(resEmpty.status).toBe(400)
+
+      const resParty = await request(app)
+        .post(`/api/plans/${planId}/guests`)
+        .set('Cookie', ownerCookie)
+        .send({ name: 'Valid Name', party: 15 })
+      expect(resParty.status).toBe(400)
+
+      const resDietary = await request(app)
+        .post(`/api/plans/${planId}/guests`)
+        .set('Cookie', ownerCookie)
+        .send({ name: 'Valid Name', dietary: 'unknown-diet' })
+      expect(resDietary.status).toBe(400)
+    })
+
+    it('adds a new guest via POST /api/plans/:id/guests', async () => {
+      const res = await request(app)
+        .post(`/api/plans/${planId}/guests`)
+        .set('Cookie', ownerCookie)
+        .send({
+          name: 'Vikram & Sunita Malhotra',
+          party: 2,
+          status: 'pending',
+          dietary: 'veg',
+          notes: 'VIP Family Table',
+        })
+
+      expect(res.status).toBe(201)
+      expect(res.body.guest).toBeDefined()
+      expect(res.body.guest.name).toBe('Vikram & Sunita Malhotra')
+      expect(res.body.guest.party).toBe(2)
+      expect(res.body.guest.status).toBe('pending')
+      expect(res.body.guest.dietary).toBe('veg')
+      expect(res.body.guest.notes).toBe('VIP Family Table')
+
+      createdGuestId = res.body.guest.id
+    })
+
+    it('lists guests via GET /api/plans/:id/guests', async () => {
+      const res = await request(app)
+        .get(`/api/plans/${planId}/guests`)
+        .set('Cookie', ownerCookie)
+
+      expect(res.status).toBe(200)
+      expect(Array.isArray(res.body.guests)).toBe(true)
+      expect(res.body.guests.length).toBeGreaterThanOrEqual(1)
+      expect(res.body.guests.some((g: any) => g.id === createdGuestId)).toBe(true)
+    })
+
+    it('updates guest details via PATCH /api/plans/:id/guests/:guestId', async () => {
+      const res = await request(app)
+        .patch(`/api/plans/${planId}/guests/${createdGuestId}`)
+        .set('Cookie', ownerCookie)
+        .send({
+          party: 3,
+          status: 'attending',
+          dietary: 'jain',
+          notes: 'Updated Table 1',
+        })
+
+      expect(res.status).toBe(200)
+      expect(res.body.guest.party).toBe(3)
+      expect(res.body.guest.status).toBe('attending')
+      expect(res.body.guest.dietary).toBe('jain')
+      expect(res.body.guest.notes).toBe('Updated Table 1')
+    })
+
+    it('imports guests via bulk paste POST /api/plans/:id/guests/import', async () => {
+      const pasteList = `
+        Aarav Mehta
+        Rohan & Neha Joshi
+        Devendra Rajput
+      `
+      const res = await request(app)
+        .post(`/api/plans/${planId}/guests/import`)
+        .set('Cookie', ownerCookie)
+        .send({ text: pasteList })
+
+      expect(res.status).toBe(201)
+      expect(res.body.count).toBe(3)
+      expect(res.body.guests).toHaveLength(3)
+      expect(res.body.guests.map((g: any) => g.name)).toContain('Aarav Mehta')
+    })
+
+    it('rejects bulk paste when exceeding 500 lines (400)', async () => {
+      const longList = Array.from({ length: 502 }, (_, i) => `Guest #${i + 1}`).join('\n')
+      const res = await request(app)
+        .post(`/api/plans/${planId}/guests/import`)
+        .set('Cookie', ownerCookie)
+        .send({ text: longList })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toContain('500')
+    })
+
+    it('calculates summary, headcount and cost-per-head via GET /api/plans/:id/guests/summary', async () => {
+      const res = await request(app)
+        .get(`/api/plans/${planId}/guests/summary`)
+        .set('Cookie', ownerCookie)
+
+      expect(res.status).toBe(200)
+      expect(res.body.summary).toBeDefined()
+      const s = res.body.summary
+
+      expect(s.totalGuests).toBe(4) // 1 created + 3 imported
+      expect(s.confirmedHeadcount).toBe(3) // createdGuest is attending with party 3, imported guests are pending
+      expect(s.countsByStatus.attending).toBe(1)
+      expect(s.countsByStatus.pending).toBe(3)
+      expect(s.countsByDietary.jain).toBe(1)
+
+      // Catering allocation should be positive from generated budget
+      expect(s.cateringAllocation).toBeGreaterThan(0)
+      expect(s.costPerHead).toBe(Math.round(s.cateringAllocation / 3))
+    })
+
+    it('deletes a guest via DELETE /api/plans/:id/guests/:guestId', async () => {
+      const delRes = await request(app)
+        .delete(`/api/plans/${planId}/guests/${createdGuestId}`)
+        .set('Cookie', ownerCookie)
+
+      expect(delRes.status).toBe(200)
+
+      const listRes = await request(app)
+        .get(`/api/plans/${planId}/guests`)
+        .set('Cookie', ownerCookie)
+
+      expect(listRes.body.guests.some((g: any) => g.id === createdGuestId)).toBe(false)
+    })
+  })
 })
 
 

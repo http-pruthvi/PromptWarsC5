@@ -77,6 +77,17 @@ CREATE TABLE IF NOT EXISTS moodboards (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS guests (
+  id TEXT PRIMARY KEY,
+  plan_id TEXT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  party INTEGER NOT NULL DEFAULT 1,
+  status TEXT NOT NULL DEFAULT 'pending',
+  dietary TEXT NOT NULL DEFAULT 'none',
+  notes TEXT NOT NULL DEFAULT '',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_plans_user ON plans(user_id);
 CREATE INDEX IF NOT EXISTS idx_budget_plan ON budget_items(plan_id);
 CREATE INDEX IF NOT EXISTS idx_milestones_plan ON milestones(plan_id);
@@ -85,4 +96,5 @@ CREATE INDEX IF NOT EXISTS idx_ideas_plan ON idea_groups(plan_id);
 CREATE INDEX IF NOT EXISTS idx_chat_plan ON chat_messages(plan_id);
 CREATE INDEX IF NOT EXISTS idx_moodboards_plan ON moodboards(plan_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_plans_share_token ON plans(share_token);
+CREATE INDEX IF NOT EXISTS idx_guests_plan ON guests(plan_id);
 `

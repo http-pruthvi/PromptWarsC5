@@ -1,4 +1,4 @@
-import type { Brief, ChatMessage, IdeaGroup, MoodboardResponse, Plan, PlanSummary, PublicPlanView, ShareResponse, User, Vendor, VendorStatus } from '@soiree/shared'
+import type { Brief, ChatMessage, DietaryOption, Guest, GuestStatus, GuestSummary, IdeaGroup, MoodboardResponse, Plan, PlanSummary, PublicPlanView, ShareResponse, User, Vendor, VendorStatus } from '@soiree/shared'
 
 export class ApiError extends Error {
   status: number
@@ -126,6 +126,29 @@ export const api = {
       request<{ message: string; shareEnabled: boolean }>(`/api/plans/${planId}/share`, {
         method: 'DELETE',
       }),
+    listGuests: (planId: string) =>
+      request<{ guests: Guest[] }>(`/api/plans/${planId}/guests`),
+    addGuest: (planId: string, guest: { name: string; party?: number; status?: GuestStatus; dietary?: DietaryOption; notes?: string }) =>
+      request<{ guest: Guest }>(`/api/plans/${planId}/guests`, {
+        method: 'POST',
+        body: JSON.stringify(guest),
+      }),
+    updateGuest: (planId: string, guestId: string, patch: Partial<Guest>) =>
+      request<{ guest: Guest }>(`/api/plans/${planId}/guests/${guestId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(patch),
+      }),
+    deleteGuest: (planId: string, guestId: string) =>
+      request<{ message: string }>(`/api/plans/${planId}/guests/${guestId}`, {
+        method: 'DELETE',
+      }),
+    importGuests: (planId: string, text: string) =>
+      request<{ count: number; guests: Guest[] }>(`/api/plans/${planId}/guests/import`, {
+        method: 'POST',
+        body: JSON.stringify({ text }),
+      }),
+    getGuestSummary: (planId: string) =>
+      request<{ summary: GuestSummary }>(`/api/plans/${planId}/guests/summary`),
   },
   public: {
     getPlan: (token: string) =>
