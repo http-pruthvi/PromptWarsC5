@@ -1,15 +1,16 @@
 import { AnimatePresence } from 'framer-motion'
-import { useCallback, useEffect, useState } from 'react'
+import React, { Suspense, useCallback, useEffect, useState } from 'react'
 import type { EventType, User } from '@soiree/shared'
 import { api } from './lib/api'
-import { AuthModal } from './components/AuthModal'
 import { Landing } from './components/Landing'
 import { Navbar } from './components/Navbar'
 import type { Route } from './components/Navbar'
-import { Planner } from './components/Planner'
 import { Petals, Toast } from './components/common'
-import { ScrollVine, VectorDefs } from './components/Vectors'
-import { SharedPlanPage } from './components/SharedPlanPage'
+import { LoopingLotus, ScrollVine, VectorDefs } from './components/Vectors'
+
+const Planner = React.lazy(() => import('./components/Planner').then((m) => ({ default: m.Planner })))
+const SharedPlanPage = React.lazy(() => import('./components/SharedPlanPage').then((m) => ({ default: m.SharedPlanPage })))
+const AuthModal = React.lazy(() => import('./components/AuthModal').then((m) => ({ default: m.AuthModal })))
 
 interface RouteState {
   route: Route
@@ -108,35 +109,52 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      <AnimatePresence mode="wait">
-        {route === 'share' ? (
-          <SharedPlanPage
-            key={`share-${routeState.token}`}
-            token={routeState.token || ''}
-            onStartPlanning={() => start()}
-            onGoHome={() => go('home')}
-          />
-        ) : route === 'home' ? (
-          <Landing key="home" onStart={start} />
-        ) : (
-          <Planner
-            key={`planner-${plannerKey}`}
-            presetType={preset}
-            user={user}
-            onRequireAuth={() => setShowAuth(true)}
-            toast={toast}
-          />
-        )}
-      </AnimatePresence>
+      <Suspense
+        fallback={
+          <div
+            style={{
+              minHeight: '80vh',
+              display: 'grid',
+              placeItems: 'center',
+              padding: 40,
+            }}
+            role="status"
+            aria-label="Loading Soirée celebration"
+          >
+            <LoopingLotus size={140} />
+          </div>
+        }
+      >
+        <AnimatePresence mode="wait">
+          {route === 'share' ? (
+            <SharedPlanPage
+              key={`share-${routeState.token}`}
+              token={routeState.token || ''}
+              onStartPlanning={() => start()}
+              onGoHome={() => go('home')}
+            />
+          ) : route === 'home' ? (
+            <Landing key="home" onStart={start} />
+          ) : (
+            <Planner
+              key={`planner-${plannerKey}`}
+              presetType={preset}
+              user={user}
+              onRequireAuth={() => setShowAuth(true)}
+              toast={toast}
+            />
+          )}
+        </AnimatePresence>
 
-      <AnimatePresence>
-        {showAuth && (
-          <AuthModal
-            onSuccess={handleAuthSuccess}
-            onClose={() => setShowAuth(false)}
-          />
-        )}
-      </AnimatePresence>
+        <AnimatePresence>
+          {showAuth && (
+            <AuthModal
+              onSuccess={handleAuthSuccess}
+              onClose={() => setShowAuth(false)}
+            />
+          )}
+        </AnimatePresence>
+      </Suspense>
 
       <Toast message={toastMsg} />
     </>

@@ -1,12 +1,13 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { useEffect, useState, useCallback } from 'react'
+import React, { Suspense, useEffect, useState, useCallback } from 'react'
 import type { EventType, Plan, PlanSummary, User } from '@soiree/shared'
 import { api } from '../lib/api'
-import { Dashboard } from './Dashboard'
-import { PlanView } from './PlanView'
 import { VectorScene } from './VectorScene'
 import { LoopingLotus } from './Vectors'
-import { Wizard } from './Wizard'
+
+const Dashboard = React.lazy(() => import('./Dashboard').then((m) => ({ default: m.Dashboard })))
+const Wizard = React.lazy(() => import('./Wizard').then((m) => ({ default: m.Wizard })))
+const PlanView = React.lazy(() => import('./PlanView').then((m) => ({ default: m.PlanView })))
 
 interface Props {
   presetType?: EventType
@@ -92,70 +93,79 @@ export function Planner({ presetType, user, onRequireAuth: _onRequireAuth, toast
             <p style={{ color: 'var(--muted)', marginTop: 14, fontSize: 14 }}>Loading your event portfolio…</p>
           </div>
         ) : (
-          <AnimatePresence mode="wait">
-            {mode === 'wizard' && (
-              <motion.div
-                key="wizard"
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -16 }}
-                transition={{ duration: 0.5 }}
-              >
-                <Wizard
-                  initialType={presetType}
-                  onDone={(p) => {
-                    setActivePlan(p)
-                    setMode('plan')
-                    void loadPlans()
-                    toast('Your plan is ready ✨')
-                  }}
-                />
-                {plans.length > 0 && (
-                  <p style={{ textAlign: 'center', marginTop: 18 }}>
-                    <button className="btn btn-ghost btn-sm" onClick={() => setMode('dashboard')}>
-                      Cancel and return to My Plans
-                    </button>
-                  </p>
-                )}
-              </motion.div>
-            )}
+          <Suspense
+            fallback={
+              <div style={{ display: 'grid', placeItems: 'center', minHeight: 320, padding: '80px 0' }} role="status" aria-label="Loading section">
+                <LoopingLotus />
+                <p style={{ color: 'var(--muted)', marginTop: 14, fontSize: 14 }}>Preparing celebration…</p>
+              </div>
+            }
+          >
+            <AnimatePresence mode="wait">
+              {mode === 'wizard' && (
+                <motion.div
+                  key="wizard"
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -16 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <Wizard
+                    initialType={presetType}
+                    onDone={(p) => {
+                      setActivePlan(p)
+                      setMode('plan')
+                      void loadPlans()
+                      toast('Your plan is ready ✨')
+                    }}
+                  />
+                  {plans.length > 0 && (
+                    <p style={{ textAlign: 'center', marginTop: 18 }}>
+                      <button className="btn btn-ghost btn-sm" onClick={() => setMode('dashboard')}>
+                        Cancel and return to My Plans
+                      </button>
+                    </p>
+                  )}
+                </motion.div>
+              )}
 
-            {mode === 'dashboard' && (
-              <motion.div
-                key="dashboard"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -16 }}
-                transition={{ duration: 0.4 }}
-              >
-                <Dashboard
-                  plans={plans}
-                  loading={loadingList}
-                  onOpen={handleOpenPlan}
-                  onDelete={handleDeletePlan}
-                  onNew={() => setMode('wizard')}
-                />
-              </motion.div>
-            )}
+              {mode === 'dashboard' && (
+                <motion.div
+                  key="dashboard"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -16 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <Dashboard
+                    plans={plans}
+                    loading={loadingList}
+                    onOpen={handleOpenPlan}
+                    onDelete={handleDeletePlan}
+                    onNew={() => setMode('wizard')}
+                  />
+                </motion.div>
+              )}
 
-            {mode === 'plan' && activePlan && (
-              <motion.div
-                key={`plan-${activePlan.id}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -16 }}
-                transition={{ duration: 0.4 }}
-              >
-                <PlanView
-                  plan={activePlan}
-                  setPlan={setPlan}
-                  onNew={() => setMode('wizard')}
-                  onBackToDashboard={() => setMode('dashboard')}
-                  toast={toast}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+              {mode === 'plan' && activePlan && (
+                <motion.div
+                  key={`plan-${activePlan.id}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -16 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <PlanView
+                    plan={activePlan}
+                    setPlan={setPlan}
+                    onNew={() => setMode('wizard')}
+                    onBackToDashboard={() => setMode('dashboard')}
+                    toast={toast}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </Suspense>
         )}
       </div>
     </main>
