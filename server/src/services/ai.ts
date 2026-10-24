@@ -1,9 +1,10 @@
-import type { Brief, ChatMessage, IdeaGroup, Plan } from '@soiree/shared'
+import type { Brief, ChatMessage, IdeaGroup, Moodboard, Plan } from '@soiree/shared'
 import {
   buildBudget,
   buildTimeline,
   buildVendors,
   generateLocalPlan,
+  generateOfflineMoodboard,
   localAnswer,
   localIdeas,
   money,
@@ -171,3 +172,78 @@ export async function askAssistant(plan: Plan, history: ChatMessage[], question:
   }
   return { text: localAnswer(plan, question), ai: false }
 }
+
+export async function generateMoodboard(
+  brief: Brief,
+  extra?: string,
+): Promise<{ moodboard: Moodboard; generatedBy: 'gemini' | 'offline' }> {
+  const offline = generateOfflineMoodboard(brief, extra)
+
+  try {
+    const key = getApiKey()
+    if (!key) {
+      return { moodboard: offline, generatedBy: 'offline' }
+    }
+
+    const prompt = `
+Create an aesthetic event moodboard and color palette for this event:
+${briefLine(brief)}
+${extra ? `Additional user vision / steering guidance: "${extra}"` : ''}
+
+Respond with a single JSON object containing:
+- "palette": exactly 5 items, each having "name" (string), "hex" (valid 6-digit hex string matching /^#[0-9a-f]{6}$/i), and "role" (string describing its purpose like "Primary Metallic Accent", "Neutral Canvas", etc.)
+- "typography": { "heading": string (font name), "body": string (font name), "vibe": string (short description) }
+- "motifs": array of 4-6 specific visual motifs/patterns (e.g., "Mughal archways", "wildflower garlands")
+- "decor": array of 4 specific decor styling points
+- "outfitNotes": array of 4 attire suggestions for hosts and guests
+- "playlistVibes": array of 4 musical mood styles
+
+CRITICAL: "palette" MUST contain exactly 5 colors, and every "hex" MUST be a 6-digit lowercase/uppercase hex starting with '#' (e.g. "#d4af37").
+`
+
+    const raw = await callGemini(prompt, true, SYSTEM)
+    const parsed = JSON.parse(raw)
+
+    const hexRegex = /^#[0-9a-f]{6}$/i
+    if (
+      !parsed ||
+      !Array.isArray(parsed.palette) ||
+      parsed.palette.length !== 5 ||
+      !parsed.palette.every((c: any) => typeof c.name === 'string' && typeof c.role === 'string' && typeof c.hex === 'string' && hexRegex.test(c.hex)) ||
+      !parsed.typography ||
+      typeof parsed.typography.heading !== 'string' ||
+      typeof parsed.typography.body !== 'string' ||
+      typeof parsed.typography.vibe !== 'string' ||
+      !Array.isArray(parsed.motifs) ||
+      !Array.isArray(parsed.decor) ||
+      !Array.isArray(parsed.outfitNotes) ||
+      !Array.isArray(parsed.playlistVibes)
+    ) {
+      console.warn('[AI Moodboard] Gemini output failed strict validation, falling back to offline')
+      return { moodboard: offline, generatedBy: 'offline' }
+    }
+
+    const moodboard: Moodboard = {
+      palette: parsed.palette.map((c: any) => ({
+        name: String(c.name).trim(),
+        hex: String(c.hex).trim().toLowerCase(),
+        role: String(c.role).trim(),
+      })),
+      typography: {
+        heading: String(parsed.typography.heading).trim(),
+        body: String(parsed.typography.body).trim(),
+        vibe: String(parsed.typography.vibe).trim(),
+      },
+      motifs: parsed.motifs.map((m: any) => String(m).trim()),
+      decor: parsed.decor.map((d: any) => String(d).trim()),
+      outfitNotes: parsed.outfitNotes.map((o: any) => String(o).trim()),
+      playlistVibes: parsed.playlistVibes.map((p: any) => String(p).trim()),
+    }
+
+    return { moodboard, generatedBy: 'gemini' }
+  } catch (err) {
+    console.warn('[AI Moodboard] Error in generateMoodboard, using offline fallback:', err)
+    return { moodboard: offline, generatedBy: 'offline' }
+  }
+}
+

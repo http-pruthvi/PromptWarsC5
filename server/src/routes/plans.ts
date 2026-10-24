@@ -3,7 +3,7 @@ import { z } from 'zod'
 import type { Brief, BudgetItem, ChatMessage, IdeaGroup, Milestone, Plan, PlanSummary, Vendor } from '@soiree/shared'
 import { getDb } from '../db/index.js'
 import { requireAuth } from '../middleware/auth.js'
-import { askAssistant, generateIdeas, generatePlan } from '../services/ai.js'
+import { askAssistant, generateIdeas, generateMoodboard, generatePlan } from '../services/ai.js'
 import { uid } from '../services/generator.js'
 import { buildICS } from '../services/ics.js'
 
@@ -456,3 +456,65 @@ plansRouter.get('/:id/export.ics', (req, res, next) => {
     next(err)
   }
 })
+
+const moodboardBodySchema = z.object({
+  extra: z.string().max(1000).optional(),
+})
+
+// POST /api/plans/:id/moodboard - Generate or regenerate moodboard
+plansRouter.post('/:id/moodboard', async (req, res, next) => {
+  try {
+    const plan = loadFullPlan(req.params.id, req.user!.id)
+    if (!plan) return res.status(404).json({ error: 'Plan not found' })
+
+    const parsed = moodboardBodySchema.parse(req.body || {})
+    const { moodboard, generatedBy } = await generateMoodboard(plan.brief, parsed.extra)
+
+    const db = getDb()
+    const rowId = uid()
+    db.prepare(`
+      INSERT INTO moodboards (id, plan_id, json, generated_by, created_at)
+      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(plan_id) DO UPDATE SET
+        json = excluded.json,
+        generated_by = excluded.generated_by,
+        created_at = CURRENT_TIMESTAMP
+    `).run(rowId, plan.id, JSON.stringify(moodboard), generatedBy)
+
+    const saved = db.prepare(`SELECT created_at FROM moodboards WHERE plan_id = ?`).get(plan.id) as any
+
+    return res.json({
+      moodboard,
+      generatedBy,
+      createdAt: saved?.created_at || new Date().toISOString(),
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// GET /api/plans/:id/moodboard - Fetch saved moodboard
+plansRouter.get('/:id/moodboard', (req, res, next) => {
+  try {
+    const plan = loadFullPlan(req.params.id, req.user!.id)
+    if (!plan) return res.status(404).json({ error: 'Plan not found' })
+
+    const db = getDb()
+    const row = db.prepare(`
+      SELECT json, generated_by, created_at FROM moodboards WHERE plan_id = ?
+    `).get(plan.id) as any
+
+    if (!row) {
+      return res.status(404).json({ error: 'Moodboard not found' })
+    }
+
+    return res.json({
+      moodboard: JSON.parse(row.json),
+      generatedBy: row.generated_by,
+      createdAt: row.created_at,
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+

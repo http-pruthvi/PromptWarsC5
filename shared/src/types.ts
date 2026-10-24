@@ -87,3 +87,30 @@ export interface User {
 export interface AuthResponse {
   user: User
 }
+
+export interface PaletteColor {
+  name: string
+  hex: string
+  role: string
+}
+
+export interface MoodboardTypography {
+  heading: string
+  body: string
+  vibe: string
+}
+
+export interface Moodboard {
+  palette: PaletteColor[]
+  typography: MoodboardTypography
+  motifs: string[]
+  decor: string[]
+  outfitNotes: string[]
+  playlistVibes: string[]
+}
+
+export interface MoodboardResponse {
+  moodboard: Moodboard
+  generatedBy: 'gemini' | 'offline'
+  createdAt: string
+}

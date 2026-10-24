@@ -67,10 +67,19 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   created_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS moodboards (
+  id TEXT PRIMARY KEY,
+  plan_id TEXT UNIQUE NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+  json TEXT NOT NULL,
+  generated_by TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_plans_user ON plans(user_id);
 CREATE INDEX IF NOT EXISTS idx_budget_plan ON budget_items(plan_id);
 CREATE INDEX IF NOT EXISTS idx_milestones_plan ON milestones(plan_id);
 CREATE INDEX IF NOT EXISTS idx_vendors_plan ON vendors(plan_id);
 CREATE INDEX IF NOT EXISTS idx_ideas_plan ON idea_groups(plan_id);
 CREATE INDEX IF NOT EXISTS idx_chat_plan ON chat_messages(plan_id);
+CREATE INDEX IF NOT EXISTS idx_moodboards_plan ON moodboards(plan_id);
 `

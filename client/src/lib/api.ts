@@ -1,4 +1,4 @@
-import type { Brief, ChatMessage, IdeaGroup, Plan, PlanSummary, User, Vendor, VendorStatus } from '@soiree/shared'
+import type { Brief, ChatMessage, IdeaGroup, MoodboardResponse, Plan, PlanSummary, User, Vendor, VendorStatus } from '@soiree/shared'
 
 export class ApiError extends Error {
   status: number
@@ -109,5 +109,12 @@ export const api = {
         body: JSON.stringify({ message }),
       }),
     getIcsUrl: (planId: string) => `/api/plans/${planId}/export.ics`,
+    getMoodboard: (planId: string) =>
+      request<MoodboardResponse>(`/api/plans/${planId}/moodboard`),
+    generateMoodboard: (planId: string, extra?: string) =>
+      request<MoodboardResponse>(`/api/plans/${planId}/moodboard`, {
+        method: 'POST',
+        body: JSON.stringify({ extra }),
+      }),
   },
 }

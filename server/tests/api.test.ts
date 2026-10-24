@@ -309,4 +309,112 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       expect(checkRes.status).toBe(404)
     })
   })
+
+  describe('5. Feature 1: AI Moodboard & Palette Endpoints', () => {
+    let userCookie: string
+    let otherCookie: string
+    let testPlanId: string
+
+    beforeAll(async () => {
+      // Create user 1 and a plan
+      const userRes = await request(app).post('/api/auth/guest')
+      userCookie = userRes.headers['set-cookie'][0]
+
+      const planRes = await request(app)
+        .post('/api/plans')
+        .set('Cookie', userCookie)
+        .send({
+          type: 'wedding',
+          title: 'Royal Udaipur Nuptials',
+          date: '2027-11-20',
+          guests: 200,
+          budget: 5000000,
+          currency: 'INR',
+          city: 'Udaipur',
+          vibe: 'Royal Heritage Velvet & Gilded Gold',
+          notes: 'Lakeside palace ceremony',
+        })
+      testPlanId = planRes.body.plan.id
+
+      // Create user 2
+      const otherRes = await request(app).post('/api/auth/guest')
+      otherCookie = otherRes.headers['set-cookie'][0]
+    })
+
+    it('requires authentication for GET /api/plans/:id/moodboard (401)', async () => {
+      const res = await request(app).get(`/api/plans/${testPlanId}/moodboard`)
+      expect(res.status).toBe(401)
+    })
+
+    it('requires authentication for POST /api/plans/:id/moodboard (401)', async () => {
+      const res = await request(app).post(`/api/plans/${testPlanId}/moodboard`).send({})
+      expect(res.status).toBe(401)
+    })
+
+    it('returns 404 when fetching moodboard before it is generated', async () => {
+      const res = await request(app)
+        .get(`/api/plans/${testPlanId}/moodboard`)
+        .set('Cookie', userCookie)
+      expect(res.status).toBe(404)
+    })
+
+    it('enforces ownership check: User B cannot generate moodboard on User A plan (404)', async () => {
+      const res = await request(app)
+        .post(`/api/plans/${testPlanId}/moodboard`)
+        .set('Cookie', otherCookie)
+        .send({ extra: 'Make it neon carnival' })
+      expect(res.status).toBe(404)
+    })
+
+    it('generates a valid moodboard with 5 colors, typography, and styling notes (offline fallback)', async () => {
+      const res = await request(app)
+        .post(`/api/plans/${testPlanId}/moodboard`)
+        .set('Cookie', userCookie)
+        .send({ extra: 'Royal gold and crimson accents' })
+
+      expect(res.status).toBe(200)
+      expect(res.body.moodboard).toBeDefined()
+
+      const mb = res.body.moodboard
+      expect(mb.palette).toHaveLength(5)
+      const hexRegex = /^#[0-9a-f]{6}$/i
+      for (const color of mb.palette) {
+        expect(color.name).toBeTruthy()
+        expect(color.role).toBeTruthy()
+        expect(color.hex).toMatch(hexRegex)
+      }
+
+      expect(mb.typography.heading).toBeTruthy()
+      expect(mb.typography.body).toBeTruthy()
+      expect(mb.typography.vibe).toBeTruthy()
+
+      expect(Array.isArray(mb.motifs)).toBe(true)
+      expect(mb.motifs.length).toBeGreaterThan(0)
+      expect(Array.isArray(mb.decor)).toBe(true)
+      expect(mb.decor.length).toBeGreaterThan(0)
+      expect(Array.isArray(mb.outfitNotes)).toBe(true)
+      expect(mb.outfitNotes.length).toBeGreaterThan(0)
+      expect(Array.isArray(mb.playlistVibes)).toBe(true)
+      expect(mb.playlistVibes.length).toBeGreaterThan(0)
+    })
+
+    it('retrieves the saved moodboard via GET /api/plans/:id/moodboard', async () => {
+      const res = await request(app)
+        .get(`/api/plans/${testPlanId}/moodboard`)
+        .set('Cookie', userCookie)
+
+      expect(res.status).toBe(200)
+      expect(res.body.moodboard).toBeDefined()
+      expect(res.body.moodboard.palette).toHaveLength(5)
+    })
+
+    it('enforces ownership check: User B cannot retrieve User A moodboard (404)', async () => {
+      const res = await request(app)
+        .get(`/api/plans/${testPlanId}/moodboard`)
+        .set('Cookie', otherCookie)
+
+      expect(res.status).toBe(404)
+    })
+  })
 })
+

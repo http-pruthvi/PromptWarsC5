@@ -468,3 +468,31 @@ body { overflow-x: clip; }
 .sparkles { position: absolute; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
 .sparkles svg { position: absolute; }
 
+/* ======================== Moodboard ======================== */
+.moodboard-wrap { display: grid; gap: 28px; }
+.moodboard-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 6px; }
+.moodboard-header h3 { font-family: var(--serif); font-size: clamp(26px, 3.2vw, 38px); margin: 0; }
+.moodboard-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.moodboard-input { min-width: 260px; max-width: 440px; padding: 10px 16px; border-radius: 999px; border: 1.5px solid var(--line); background: rgba(255,255,255,.8); font-size: 13.5px; transition: border-color .3s; }
+.moodboard-input:focus { outline: none; border-color: var(--gold); }
+.swatches-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+@media (max-width: 900px) { .swatches-grid { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); } }
+.swatch-card { background: rgba(255,255,255,.75); border: 1px solid #fff; border-radius: 20px; padding: 12px; box-shadow: 0 4px 20px rgba(91,63,85,.05); transition: transform .35s var(--ease), box-shadow .35s; cursor: pointer; position: relative; }
+.swatch-card:hover { transform: translateY(-4px); box-shadow: 0 10px 28px rgba(91,63,85,.12); }
+.swatch-color { height: 130px; border-radius: 14px; position: relative; overflow: hidden; display: grid; place-items: center; box-shadow: inset 0 2px 6px rgba(0,0,0,.08); }
+.swatch-copy-hint { opacity: 0; transform: translateY(6px); transition: all .25s var(--ease); background: rgba(0,0,0,.65); color: #fff; font-size: 11px; padding: 4px 10px; border-radius: 999px; backdrop-filter: blur(4px); display: flex; align-items: center; gap: 5px; }
+.swatch-card:hover .swatch-copy-hint { opacity: 1; transform: translateY(0); }
+.swatch-meta { padding: 10px 4px 4px; display: grid; gap: 4px; }
+.swatch-role { font-size: 10.5px; text-transform: uppercase; letter-spacing: .12em; color: var(--gold-deep, #9a7430); font-weight: 600; }
+.swatch-name { font-size: 15px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.swatch-hex { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-family: monospace; color: var(--muted); background: rgba(247,239,229,.7); padding: 3px 8px; border-radius: 6px; width: fit-content; margin-top: 2px; }
+
+.moodboard-bento { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 20px; }
+.mb-card { background: rgba(255,255,255,.75); border: 1px solid #fff; border-radius: 22px; padding: 24px; box-shadow: 0 4px 20px rgba(91,63,85,.05); display: flex; flex-direction: column; gap: 14px; }
+.mb-card-title { font-size: 12.5px; text-transform: uppercase; letter-spacing: .12em; color: var(--gold-deep, #9a7430); font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.mb-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.mb-chip { padding: 7px 14px; border-radius: 999px; background: rgba(247,239,229,.7); border: 1px solid rgba(196,160,90,.3); font-size: 13px; color: var(--ink); display: flex; align-items: center; gap: 6px; }
+.mb-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; font-size: 13.5px; color: var(--ink); }
+.mb-list li { display: flex; gap: 10px; align-items: flex-start; line-height: 1.45; }
+.mb-list svg { color: var(--gold); flex: none; margin-top: 3px; }
+
