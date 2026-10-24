@@ -416,5 +416,134 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       expect(res.status).toBe(404)
     })
   })
+
+  describe('6. Feature 2: Shareable Read-Only Plan Link Endpoints', () => {
+    let ownerCookie: string
+    let otherCookie: string
+    let planId: string
+    let shareToken: string
+
+    beforeAll(async () => {
+      const ownerRes = await request(app).post('/api/auth/guest')
+      ownerCookie = ownerRes.headers['set-cookie'][0]
+
+      const planRes = await request(app)
+        .post('/api/plans')
+        .set('Cookie', ownerCookie)
+        .send({
+          type: 'birthday',
+          title: 'Ayaan 30th Golden Milestone',
+          date: '2027-09-15',
+          guests: 75,
+          budget: 1500000,
+          currency: 'INR',
+          city: 'Mumbai',
+          vibe: 'Modern Black Tie & Rose Gold',
+          notes: 'Rooftop celebration with live jazz and private chef',
+        })
+      planId = planRes.body.plan.id
+
+      // Also generate moodboard for this plan so we can test public moodboard visibility
+      await request(app)
+        .post(`/api/plans/${planId}/moodboard`)
+        .set('Cookie', ownerCookie)
+        .send({})
+
+      const otherRes = await request(app).post('/api/auth/guest')
+      otherCookie = otherRes.headers['set-cookie'][0]
+    })
+
+    it('requires auth to enable share link (401)', async () => {
+      const res = await request(app).post(`/api/plans/${planId}/share`)
+      expect(res.status).toBe(401)
+    })
+
+    it('requires auth to revoke share link (401)', async () => {
+      const res = await request(app).delete(`/api/plans/${planId}/share`)
+      expect(res.status).toBe(401)
+    })
+
+    it('enforces ownership check: User B cannot enable share for User A plan (404)', async () => {
+      const res = await request(app)
+        .post(`/api/plans/${planId}/share`)
+        .set('Cookie', otherCookie)
+      expect(res.status).toBe(404)
+    })
+
+    it('enforces ownership check: User B cannot revoke share for User A plan (404)', async () => {
+      const res = await request(app)
+        .delete(`/api/plans/${planId}/share`)
+        .set('Cookie', otherCookie)
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 404 on public route when share is not yet enabled', async () => {
+      const res = await request(app).get('/api/public/plans/random-unregistered-token-xyz')
+      expect(res.status).toBe(404)
+      expect(res.body.error).toContain('not found')
+    })
+
+    it('enables share and returns a 24-char URL-safe token', async () => {
+      const res = await request(app)
+        .post(`/api/plans/${planId}/share`)
+        .set('Cookie', ownerCookie)
+
+      expect(res.status).toBe(200)
+      expect(res.body.shareEnabled).toBe(true)
+      expect(typeof res.body.shareToken).toBe('string')
+      expect(res.body.shareToken).toHaveLength(24)
+      shareToken = res.body.shareToken
+    })
+
+    it('fetches sanitized read-only plan via public route without exposing budget or confidential fields', async () => {
+      const res = await request(app).get(`/api/public/plans/${shareToken}`)
+
+      expect(res.status).toBe(200)
+      expect(res.body.plan).toBeDefined()
+      const p = res.body.plan
+
+      expect(p.title).toBe('Ayaan 30th Golden Milestone')
+      expect(p.eventType).toBe('birthday')
+      expect(p.city).toBe('Mumbai')
+      expect(p.summary).toBeTruthy()
+      expect(Array.isArray(p.timeline)).toBe(true)
+      expect(Array.isArray(p.vendors)).toBe(true)
+      expect(Array.isArray(p.ideas)).toBe(true)
+      expect(p.moodboard).toBeDefined()
+      expect(p.moodboard.palette).toHaveLength(5)
+
+      // Strict sanitization checks
+      expect((p as any).budget).toBeUndefined()
+      expect((p as any).spent).toBeUndefined()
+      expect((p as any).notes).toBeUndefined()
+      expect((p as any).chat).toBeUndefined()
+      expect((p as any).email).toBeUndefined()
+      expect((p as any).userId).toBeUndefined()
+      expect((p as any).user_id).toBeUndefined()
+
+      // Vendor sanitization: check that vendors have NO estimate or tips
+      for (const v of p.vendors) {
+        expect(v.category).toBeTruthy()
+        expect(v.status).toBeTruthy()
+        expect((v as any).estimate).toBeUndefined()
+        expect((v as any).tips).toBeUndefined()
+      }
+    })
+
+    it('revokes share link and returns 404 for subsequent public requests', async () => {
+      const revokeRes = await request(app)
+        .delete(`/api/plans/${planId}/share`)
+        .set('Cookie', ownerCookie)
+
+      expect(revokeRes.status).toBe(200)
+      expect(revokeRes.body.shareEnabled).toBe(false)
+
+      // Revoked token must return the same 404 as unknown token
+      const checkRes = await request(app).get(`/api/public/plans/${shareToken}`)
+      expect(checkRes.status).toBe(404)
+      expect(checkRes.body.error).toContain('not found')
+    })
+  })
 })
+
 

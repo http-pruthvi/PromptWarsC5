@@ -4,7 +4,7 @@ import { ArrowRight, LogIn, LogOut, Menu, User as UserIcon, X } from 'lucide-rea
 import { Logo } from './common'
 import type { User } from '@soiree/shared'
 
-export type Route = 'home' | 'planner'
+export type Route = 'home' | 'planner' | 'share'
 
 interface Props {
   route: Route

@@ -114,3 +114,30 @@ export interface MoodboardResponse {
   generatedBy: 'gemini' | 'offline'
   createdAt: string
 }
+
+export interface PublicPlanView {
+  title: string
+  eventType: EventType
+  date: string
+  city: string
+  summary: string
+  timeline: Array<{
+    id: string
+    label: string
+    detail: string
+    weeksBefore: number
+    done: boolean
+  }>
+  vendors: Array<{
+    category: string
+    status: VendorStatus
+  }>
+  ideas: IdeaGroup[]
+  moodboard: Moodboard | null
+}
+
+export interface ShareResponse {
+  shareToken: string | null
+  shareEnabled: boolean
+}
+

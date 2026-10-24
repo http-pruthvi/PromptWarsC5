@@ -1,4 +1,4 @@
-import type { Brief, ChatMessage, IdeaGroup, MoodboardResponse, Plan, PlanSummary, User, Vendor, VendorStatus } from '@soiree/shared'
+import type { Brief, ChatMessage, IdeaGroup, MoodboardResponse, Plan, PlanSummary, PublicPlanView, ShareResponse, User, Vendor, VendorStatus } from '@soiree/shared'
 
 export class ApiError extends Error {
   status: number
@@ -116,5 +116,19 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ extra }),
       }),
+    getShare: (planId: string) =>
+      request<ShareResponse>(`/api/plans/${planId}/share`),
+    enableShare: (planId: string) =>
+      request<ShareResponse>(`/api/plans/${planId}/share`, {
+        method: 'POST',
+      }),
+    revokeShare: (planId: string) =>
+      request<{ message: string; shareEnabled: boolean }>(`/api/plans/${planId}/share`, {
+        method: 'DELETE',
+      }),
+  },
+  public: {
+    getPlan: (token: string) =>
+      request<{ plan: PublicPlanView }>(`/api/public/plans/${token}`),
   },
 }

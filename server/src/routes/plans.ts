@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { Router } from 'express'
 import { z } from 'zod'
 import type { Brief, BudgetItem, ChatMessage, IdeaGroup, Milestone, Plan, PlanSummary, Vendor } from '@soiree/shared'
@@ -517,4 +518,66 @@ plansRouter.get('/:id/moodboard', (req, res, next) => {
     next(err)
   }
 })
+
+// POST /api/plans/:id/share - Enable share link and return random 24-char URL-safe token
+plansRouter.post('/:id/share', (req, res, next) => {
+  try {
+    const plan = loadFullPlan(req.params.id, req.user!.id)
+    if (!plan) return res.status(404).json({ error: 'Plan not found' })
+
+    const db = getDb()
+    const existing = db.prepare(`SELECT share_token FROM plans WHERE id = ?`).get(plan.id) as any
+    const shareToken = existing?.share_token || crypto.randomBytes(18).toString('base64url')
+
+    db.prepare(`
+      UPDATE plans SET share_token = ?, share_enabled = 1 WHERE id = ?
+    `).run(shareToken, plan.id)
+
+    return res.json({
+      shareToken,
+      shareEnabled: true,
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// DELETE /api/plans/:id/share - Revoke share link
+plansRouter.delete('/:id/share', (req, res, next) => {
+  try {
+    const plan = loadFullPlan(req.params.id, req.user!.id)
+    if (!plan) return res.status(404).json({ error: 'Plan not found' })
+
+    const db = getDb()
+    db.prepare(`
+      UPDATE plans SET share_enabled = 0 WHERE id = ?
+    `).run(plan.id)
+
+    return res.json({
+      message: 'Share link revoked',
+      shareEnabled: false,
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// GET /api/plans/:id/share - Get share status
+plansRouter.get('/:id/share', (req, res, next) => {
+  try {
+    const plan = loadFullPlan(req.params.id, req.user!.id)
+    if (!plan) return res.status(404).json({ error: 'Plan not found' })
+
+    const db = getDb()
+    const row = db.prepare(`SELECT share_token, share_enabled FROM plans WHERE id = ?`).get(plan.id) as any
+
+    return res.json({
+      shareToken: row?.share_token || null,
+      shareEnabled: Boolean(row?.share_enabled),
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
 

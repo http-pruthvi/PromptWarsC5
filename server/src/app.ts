@@ -11,6 +11,8 @@ import { plansRouter } from './routes/plans.js'
 import { healthRouter } from './routes/health.js'
 import { errorHandler } from './middleware/errorHandler.js'
 
+import { publicRouter } from './routes/public.js'
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
@@ -53,10 +55,19 @@ const authLimiter = rateLimit({
   message: { error: 'Too many authentication attempts, please try again later.' },
 })
 
+const publicLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests for shared plans, please try again later.' },
+})
+
 // Mount API routes
 app.use('/api', apiLimiter)
 app.use('/api/auth', authLimiter, authRouter)
 app.use('/api/plans', plansRouter)
+app.use('/api/public', publicLimiter, publicRouter)
 app.use('/api/health', healthRouter)
 
 // Serve frontend in production

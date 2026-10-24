@@ -21,7 +21,9 @@ CREATE TABLE IF NOT EXISTS plans (
   vibe TEXT NOT NULL,
   notes TEXT NOT NULL,
   summary TEXT NOT NULL,
-  generated_by TEXT NOT NULL
+  generated_by TEXT NOT NULL,
+  share_token TEXT UNIQUE,
+  share_enabled INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS budget_items (
@@ -82,4 +84,5 @@ CREATE INDEX IF NOT EXISTS idx_vendors_plan ON vendors(plan_id);
 CREATE INDEX IF NOT EXISTS idx_ideas_plan ON idea_groups(plan_id);
 CREATE INDEX IF NOT EXISTS idx_chat_plan ON chat_messages(plan_id);
 CREATE INDEX IF NOT EXISTS idx_moodboards_plan ON moodboards(plan_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_plans_share_token ON plans(share_token);
 `
