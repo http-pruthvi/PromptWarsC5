@@ -4,13 +4,20 @@ import { getDb } from '../db/index.js'
 
 export const publicRouter = Router()
 
+import { z } from 'zod'
+
+const publicTokenSchema = z.object({
+  token: z.string().min(1).max(64).regex(/^[A-Za-z0-9_-]+$/, 'Invalid share token format'),
+}).strict()
+
 // GET /api/public/plans/:token - Sanitized public read-only view
 publicRouter.get('/plans/:token', (req, res, next) => {
   try {
-    const token = req.params.token
-    if (!token || typeof token !== 'string') {
+    const parseResult = publicTokenSchema.safeParse(req.params)
+    if (!parseResult.success) {
       return res.status(404).json({ error: 'Plan not found' })
     }
+    const { token } = parseResult.data
 
     const db = getDb()
     const p = db.prepare(`

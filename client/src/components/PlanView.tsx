@@ -264,13 +264,14 @@ export default function PlanView({ plan, setPlan, onNew, onBackToDashboard, toas
             </>
           )}
 
-          <Suspense
-            fallback={
-              <div style={{ display: 'grid', placeItems: 'center', minHeight: 240, padding: 30 }} role="status" aria-label="Loading section">
-                <LoopingLotus size={120} />
-              </div>
-            }
-          >
+          <div className="tab-content-area">
+            <Suspense
+              fallback={
+                <div style={{ display: 'grid', placeItems: 'center', minHeight: 520, padding: 30 }} role="status" aria-label="Loading section">
+                  <LoopingLotus size={120} />
+                </div>
+              }
+            >
             {tab === 'budget' && (
               <BudgetTab
                 plan={plan}
@@ -300,6 +301,7 @@ export default function PlanView({ plan, setPlan, onNew, onBackToDashboard, toas
 
             {tab === 'ask' && <AskTab plan={plan} />}
           </Suspense>
+          </div>
         </motion.div>
       </AnimatePresence>
 

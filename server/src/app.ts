@@ -44,8 +44,9 @@ app.use(
   }),
 )
 
-// Body and cookie parsing
-app.use(express.json({ limit: '2mb' }))
+// Body and cookie parsing with strict size limits
+app.use(express.json({ limit: '256kb' }))
+app.use(express.urlencoded({ extended: false, limit: '100kb' }))
 app.use(cookieParser())
 
 // Rate limiting

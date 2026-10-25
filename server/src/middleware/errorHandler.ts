@@ -11,6 +11,13 @@ export function errorHandler(err: any, _req: Request, res: Response, _next: Next
     })
   }
 
+  if (err.type === 'entity.too.large' || err.status === 413) {
+    return res.status(413).json({
+      error: 'Payload too large',
+      message: 'Request body exceeds the maximum permitted size limit.',
+    })
+  }
+
   const status = typeof err.status === 'number' && err.status >= 400 && err.status < 600 ? err.status : 500
   const isProd = process.env.NODE_ENV === 'production'
   const is5xx = status >= 500

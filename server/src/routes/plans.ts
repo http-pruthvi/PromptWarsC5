@@ -7,21 +7,118 @@ import { requireAuth } from '../middleware/auth.js'
 import { askAssistant, generateIdeas, generateMoodboard, generatePlan, rebalanceBudget } from '../services/ai.js'
 import { uid } from '../services/generator.js'
 import { buildICS } from '../services/ics.js'
+import { sanitizeText } from '../utils/sanitize.js'
 
 export const plansRouter = Router()
 plansRouter.use(requireAuth)
 
+// Strict Param Schemas
+const idParamSchema = z.object({
+  id: z.string().trim().min(1).max(64),
+}).strict()
+
+const budgetItemParamSchema = z.object({
+  id: z.string().trim().min(1).max(64),
+  itemId: z.string().trim().min(1).max(64),
+}).strict()
+
+const milestoneParamSchema = z.object({
+  id: z.string().trim().min(1).max(64),
+  milestoneId: z.string().trim().min(1).max(64),
+}).strict()
+
+const vendorParamSchema = z.object({
+  id: z.string().trim().min(1).max(64),
+  vendorId: z.string().trim().min(1).max(64),
+}).strict()
+
+const guestParamSchema = z.object({
+  id: z.string().trim().min(1).max(64),
+  guestId: z.string().trim().min(1).max(64),
+}).strict()
+
+// Strict Query Schemas
+const paginationQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(500).optional().default(50),
+  offset: z.coerce.number().int().min(0).optional().default(0),
+}).strict()
+
+// Strict Body Schemas
 const briefSchema = z.object({
   type: z.enum(['wedding', 'birthday', 'community']),
-  title: z.string().optional().default(''),
-  date: z.string().min(10),
-  guests: z.number().int().positive(),
-  budget: z.number().positive(),
+  title: z.string().trim().max(200).optional().default(''),
+  date: z.string().trim().min(10).max(20),
+  guests: z.number().int().positive().max(100000),
+  budget: z.number().positive().max(1000000000),
   currency: z.enum(['INR', 'USD', 'EUR']).default('INR'),
-  city: z.string().optional().default(''),
-  vibe: z.string().optional().default(''),
-  notes: z.string().optional().default(''),
-})
+  city: z.string().trim().max(100).optional().default(''),
+  vibe: z.string().trim().max(200).optional().default(''),
+  notes: z.string().trim().max(2000).optional().default(''),
+}).strict()
+
+const updateBudgetSchema = z.object({
+  allocated: z.number().min(0).max(1000000000).optional(),
+  spent: z.number().min(0).max(1000000000).optional(),
+}).strict()
+
+const updateMilestoneSchema = z.object({
+  done: z.boolean(),
+}).strict()
+
+const addVendorSchema = z.object({
+  category: z.string().trim().min(1).max(100),
+  name: z.string().trim().max(100).optional().default(''),
+  status: z.enum(['todo', 'contacted', 'booked']).optional().default('todo'),
+  estimate: z.number().min(0).max(1000000000).optional().default(0),
+  tips: z.string().trim().max(1000).optional().default(''),
+}).strict()
+
+const updateVendorSchema = z.object({
+  category: z.string().trim().min(1).max(100).optional(),
+  name: z.string().trim().max(100).optional(),
+  status: z.enum(['todo', 'contacted', 'booked']).optional(),
+  estimate: z.number().min(0).max(1000000000).optional(),
+  tips: z.string().trim().max(1000).optional(),
+}).strict()
+
+const regenerateIdeasSchema = z.object({
+  extra: z.string().trim().max(500).optional().default(''),
+}).strict()
+
+const chatSchema = z.object({
+  message: z.string().trim().min(1, 'Message cannot be empty').max(2000),
+}).strict()
+
+const moodboardBodySchema = z.object({
+  extra: z.string().trim().max(500).optional(),
+}).strict()
+
+const guestCreateSchema = z.object({
+  name: z.string().trim().min(1, 'String must contain at least 1 character(s)').max(100),
+  party: z.number().int().min(1).max(10).default(1),
+  status: z.enum(['pending', 'attending', 'declined']).default('pending'),
+  dietary: z.enum(['none', 'veg', 'vegan', 'jain', 'halal', 'other']).default('none'),
+  notes: z.string().trim().max(500).default(''),
+}).strict()
+
+const guestPatchSchema = z.object({
+  name: z.string().trim().min(1).max(100).optional(),
+  party: z.number().int().min(1).max(10).optional(),
+  status: z.enum(['pending', 'attending', 'declined']).optional(),
+  dietary: z.enum(['none', 'veg', 'vegan', 'jain', 'halal', 'other']).optional(),
+  notes: z.string().trim().max(500).optional(),
+}).strict()
+
+const guestImportSchema = z.object({
+  text: z.string().max(100000),
+}).strict()
+
+const applyRebalanceSchema = z.object({
+  changes: z.array(z.object({
+    itemId: z.string().trim().min(1).max(64),
+    to: z.number().nonnegative().max(1000000000),
+  }).strict()).min(1).max(100),
+}).strict()
 
 // Lightweight helper to verify plan existence and ownership without loading full relations
 function verifyPlanOwnership(planId: string, userId: string): { id: string } | null {
@@ -97,8 +194,7 @@ function loadFullPlan(planId: string, userId: string): Plan | null {
 // GET /api/plans - List user's plans with pagination
 plansRouter.get('/', (req, res, next) => {
   try {
-    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 100)
-    const offset = Math.max(parseInt(req.query.offset as string) || 0, 0)
+    const { limit, offset } = paginationQuerySchema.parse(req.query)
 
     const countStmt = getStatement('SELECT COUNT(*) as count FROM plans WHERE user_id = ?')
     const total = (countStmt.get(req.user!.id) as { count: number }).count
@@ -118,8 +214,16 @@ plansRouter.get('/', (req, res, next) => {
 // POST /api/plans - Create a new plan from a brief
 plansRouter.post('/', async (req, res, next) => {
   try {
-    const brief = briefSchema.parse(req.body)
-    const plan = await generatePlan(brief)
+    const rawBrief = briefSchema.parse(req.body)
+    const sanitizedBrief: Brief = {
+      ...rawBrief,
+      title: sanitizeText(rawBrief.title),
+      city: sanitizeText(rawBrief.city),
+      vibe: sanitizeText(rawBrief.vibe),
+      notes: sanitizeText(rawBrief.notes),
+    }
+
+    const plan = await generatePlan(sanitizedBrief)
     const db = getDb()
     const userId = req.user!.id
 
@@ -189,7 +293,8 @@ plansRouter.post('/', async (req, res, next) => {
 // GET /api/plans/:id - Retrieve full plan
 plansRouter.get('/:id', (req, res, next) => {
   try {
-    const plan = loadFullPlan(req.params.id, req.user!.id)
+    const { id } = idParamSchema.parse(req.params)
+    const plan = loadFullPlan(id, req.user!.id)
     if (!plan) {
       return res.status(404).json({ error: 'Plan not found' })
     }
@@ -202,8 +307,9 @@ plansRouter.get('/:id', (req, res, next) => {
 // DELETE /api/plans/:id - Delete plan
 plansRouter.delete('/:id', (req, res, next) => {
   try {
+    const { id } = idParamSchema.parse(req.params)
     const db = getDb()
-    const result = db.prepare('DELETE FROM plans WHERE id = ? AND user_id = ?').run(req.params.id, req.user!.id)
+    const result = db.prepare('DELETE FROM plans WHERE id = ? AND user_id = ?').run(id, req.user!.id)
     if (result.changes === 0) {
       return res.status(404).json({ error: 'Plan not found' })
     }
@@ -214,21 +320,17 @@ plansRouter.delete('/:id', (req, res, next) => {
 })
 
 // PATCH /api/plans/:id/budget/:itemId - Update budget item
-const updateBudgetSchema = z.object({
-  allocated: z.number().min(0).optional(),
-  spent: z.number().min(0).optional(),
-})
-
 plansRouter.patch('/:id/budget/:itemId', (req, res, next) => {
   try {
+    const { id, itemId } = budgetItemParamSchema.parse(req.params)
     const { allocated, spent } = updateBudgetSchema.parse(req.body)
     const db = getDb()
 
     // Ensure plan ownership
-    const plan = db.prepare('SELECT id FROM plans WHERE id = ? AND user_id = ?').get(req.params.id, req.user!.id)
+    const plan = db.prepare('SELECT id FROM plans WHERE id = ? AND user_id = ?').get(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
-    const item = db.prepare('SELECT * FROM budget_items WHERE id = ? AND plan_id = ?').get(req.params.itemId, req.params.id) as any
+    const item = db.prepare('SELECT * FROM budget_items WHERE id = ? AND plan_id = ?').get(itemId, id) as any
     if (!item) return res.status(404).json({ error: 'Budget item not found' })
 
     const newAllocated = allocated !== undefined ? allocated : item.allocated
@@ -236,7 +338,7 @@ plansRouter.patch('/:id/budget/:itemId', (req, res, next) => {
 
     db.prepare(`
       UPDATE budget_items SET allocated = ?, spent = ? WHERE id = ? AND plan_id = ?
-    `).run(newAllocated, newSpent, req.params.itemId, req.params.id)
+    `).run(newAllocated, newSpent, itemId, id)
 
     return res.json({
       item: {
@@ -253,25 +355,22 @@ plansRouter.patch('/:id/budget/:itemId', (req, res, next) => {
 })
 
 // PATCH /api/plans/:id/milestones/:milestoneId - Update milestone done state
-const updateMilestoneSchema = z.object({
-  done: z.boolean(),
-})
-
 plansRouter.patch('/:id/milestones/:milestoneId', (req, res, next) => {
   try {
+    const { id, milestoneId } = milestoneParamSchema.parse(req.params)
     const { done } = updateMilestoneSchema.parse(req.body)
     const db = getDb()
 
-    const plan = db.prepare('SELECT id FROM plans WHERE id = ? AND user_id = ?').get(req.params.id, req.user!.id)
+    const plan = db.prepare('SELECT id FROM plans WHERE id = ? AND user_id = ?').get(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const result = db.prepare(`
       UPDATE milestones SET done = ? WHERE id = ? AND plan_id = ?
-    `).run(done ? 1 : 0, req.params.milestoneId, req.params.id)
+    `).run(done ? 1 : 0, milestoneId, id)
 
     if (result.changes === 0) return res.status(404).json({ error: 'Milestone not found' })
 
-    return res.json({ id: req.params.milestoneId, done })
+    return res.json({ id: milestoneId, done })
   } catch (err) {
     next(err)
   }
@@ -280,11 +379,11 @@ plansRouter.patch('/:id/milestones/:milestoneId', (req, res, next) => {
 // GET /api/plans/:id/vendors - List vendors with pagination
 plansRouter.get('/:id/vendors', (req, res, next) => {
   try {
-    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
+    const { id } = idParamSchema.parse(req.params)
+    const plan = verifyPlanOwnership(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
-    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 100, 1), 500)
-    const offset = Math.max(parseInt(req.query.offset as string) || 0, 0)
+    const { limit, offset } = paginationQuerySchema.parse(req.query)
 
     const countStmt = getStatement('SELECT COUNT(*) as count FROM vendors WHERE plan_id = ?')
     const total = (countStmt.get(plan.id) as { count: number }).count
@@ -301,31 +400,30 @@ plansRouter.get('/:id/vendors', (req, res, next) => {
 })
 
 // POST /api/plans/:id/vendors - Add vendor
-const addVendorSchema = z.object({
-  category: z.string().min(1),
-  name: z.string().optional().default(''),
-  status: z.enum(['todo', 'contacted', 'booked']).optional().default('todo'),
-  estimate: z.number().min(0).optional().default(0),
-  tips: z.string().optional().default(''),
-})
-
 plansRouter.post('/:id/vendors', (req, res, next) => {
   try {
-    const payload = addVendorSchema.parse(req.body)
-    const db = getDb()
+    const { id } = idParamSchema.parse(req.params)
+    const raw = addVendorSchema.parse(req.body)
+    const payload = {
+      ...raw,
+      category: sanitizeText(raw.category),
+      name: sanitizeText(raw.name),
+      tips: sanitizeText(raw.tips),
+    }
 
-    const plan = db.prepare('SELECT id FROM plans WHERE id = ? AND user_id = ?').get(req.params.id, req.user!.id)
+    const db = getDb()
+    const plan = db.prepare('SELECT id FROM plans WHERE id = ? AND user_id = ?').get(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
-    const id = uid()
+    const vendorId = uid()
     db.prepare(`
       INSERT INTO vendors (id, plan_id, category, name, status, estimate, tips)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(id, req.params.id, payload.category, payload.name, payload.status, payload.estimate, payload.tips)
+    `).run(vendorId, id, payload.category, payload.name, payload.status, payload.estimate, payload.tips)
 
     return res.status(201).json({
       vendor: {
-        id,
+        id: vendorId,
         category: payload.category,
         name: payload.name,
         status: payload.status,
@@ -339,39 +437,32 @@ plansRouter.post('/:id/vendors', (req, res, next) => {
 })
 
 // PATCH /api/plans/:id/vendors/:vendorId - Update vendor
-const updateVendorSchema = z.object({
-  category: z.string().optional(),
-  name: z.string().optional(),
-  status: z.enum(['todo', 'contacted', 'booked']).optional(),
-  estimate: z.number().min(0).optional(),
-  tips: z.string().optional(),
-})
-
 plansRouter.patch('/:id/vendors/:vendorId', (req, res, next) => {
   try {
+    const { id, vendorId } = vendorParamSchema.parse(req.params)
     const payload = updateVendorSchema.parse(req.body)
     const db = getDb()
 
-    const plan = db.prepare('SELECT id FROM plans WHERE id = ? AND user_id = ?').get(req.params.id, req.user!.id)
+    const plan = db.prepare('SELECT id FROM plans WHERE id = ? AND user_id = ?').get(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
-    const vendor = db.prepare('SELECT * FROM vendors WHERE id = ? AND plan_id = ?').get(req.params.vendorId, req.params.id) as any
+    const vendor = db.prepare('SELECT * FROM vendors WHERE id = ? AND plan_id = ?').get(vendorId, id) as any
     if (!vendor) return res.status(404).json({ error: 'Vendor not found' })
 
     const updated = {
-      category: payload.category ?? vendor.category,
-      name: payload.name ?? vendor.name,
+      category: payload.category !== undefined ? sanitizeText(payload.category) : vendor.category,
+      name: payload.name !== undefined ? sanitizeText(payload.name) : vendor.name,
       status: payload.status ?? vendor.status,
       estimate: payload.estimate !== undefined ? payload.estimate : vendor.estimate,
-      tips: payload.tips ?? vendor.tips,
+      tips: payload.tips !== undefined ? sanitizeText(payload.tips) : vendor.tips,
     }
 
     db.prepare(`
       UPDATE vendors SET category = ?, name = ?, status = ?, estimate = ?, tips = ?
       WHERE id = ? AND plan_id = ?
-    `).run(updated.category, updated.name, updated.status, updated.estimate, updated.tips, req.params.vendorId, req.params.id)
+    `).run(updated.category, updated.name, updated.status, updated.estimate, updated.tips, vendorId, id)
 
-    return res.json({ vendor: { id: req.params.vendorId, ...updated } })
+    return res.json({ vendor: { id: vendorId, ...updated } })
   } catch (err) {
     next(err)
   }
@@ -380,11 +471,12 @@ plansRouter.patch('/:id/vendors/:vendorId', (req, res, next) => {
 // DELETE /api/plans/:id/vendors/:vendorId - Delete vendor
 plansRouter.delete('/:id/vendors/:vendorId', (req, res, next) => {
   try {
+    const { id, vendorId } = vendorParamSchema.parse(req.params)
     const db = getDb()
-    const plan = db.prepare('SELECT id FROM plans WHERE id = ? AND user_id = ?').get(req.params.id, req.user!.id)
+    const plan = db.prepare('SELECT id FROM plans WHERE id = ? AND user_id = ?').get(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
-    const result = db.prepare('DELETE FROM vendors WHERE id = ? AND plan_id = ?').run(req.params.vendorId, req.params.id)
+    const result = db.prepare('DELETE FROM vendors WHERE id = ? AND plan_id = ?').run(vendorId, id)
     if (result.changes === 0) return res.status(404).json({ error: 'Vendor not found' })
 
     return res.json({ message: 'Vendor removed successfully' })
@@ -394,26 +486,25 @@ plansRouter.delete('/:id/vendors/:vendorId', (req, res, next) => {
 })
 
 // POST /api/plans/:id/ideas/regenerate - Regenerate ideas with optional prompt
-const regenerateIdeasSchema = z.object({
-  extra: z.string().optional().default(''),
-})
-
 plansRouter.post('/:id/ideas/regenerate', async (req, res, next) => {
   try {
+    const { id } = idParamSchema.parse(req.params)
     const { extra } = regenerateIdeasSchema.parse(req.body)
-    const plan = loadFullPlan(req.params.id, req.user!.id)
+    const sanitizedExtra = sanitizeText(extra)
+
+    const plan = loadFullPlan(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
-    const { ideas, ai } = await generateIdeas(plan.brief, extra)
+    const { ideas, ai } = await generateIdeas(plan.brief, sanitizedExtra)
     const db = getDb()
 
     const updateIdeasTx = db.transaction(() => {
-      db.prepare('DELETE FROM idea_groups WHERE plan_id = ?').run(req.params.id)
+      db.prepare('DELETE FROM idea_groups WHERE plan_id = ?').run(id)
       const insertIdea = db.prepare(`
         INSERT INTO idea_groups (id, plan_id, title, items_json) VALUES (?, ?, ?, ?)
       `)
       for (const g of ideas) {
-        insertIdea.run(uid(), req.params.id, g.title, JSON.stringify(g.items))
+        insertIdea.run(uid(), id, g.title, JSON.stringify(g.items))
       }
     })
     updateIdeasTx()
@@ -427,11 +518,11 @@ plansRouter.post('/:id/ideas/regenerate', async (req, res, next) => {
 // GET /api/plans/:id/chat - Get chat history with pagination
 plansRouter.get('/:id/chat', (req, res, next) => {
   try {
-    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
+    const { id } = idParamSchema.parse(req.params)
+    const plan = verifyPlanOwnership(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
-    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 100, 1), 500)
-    const offset = Math.max(parseInt(req.query.offset as string) || 0, 0)
+    const { limit, offset } = paginationQuerySchema.parse(req.query)
 
     const countStmt = getStatement('SELECT COUNT(*) as count FROM chat_messages WHERE plan_id = ?')
     const total = (countStmt.get(plan.id) as { count: number }).count
@@ -449,37 +540,36 @@ plansRouter.get('/:id/chat', (req, res, next) => {
 })
 
 // POST /api/plans/:id/chat - Send chat message and get reply
-const chatSchema = z.object({
-  message: z.string().min(1, 'Message cannot be empty'),
-})
-
 plansRouter.post('/:id/chat', async (req, res, next) => {
   try {
+    const { id } = idParamSchema.parse(req.params)
     const { message } = chatSchema.parse(req.body)
-    const plan = loadFullPlan(req.params.id, req.user!.id)
+    const sanitizedMessage = sanitizeText(message)
+
+    const plan = loadFullPlan(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const db = getDb()
     const history = db.prepare(`
       SELECT role, text FROM chat_messages WHERE plan_id = ? ORDER BY created_at ASC
-    `).all(req.params.id) as ChatMessage[]
+    `).all(id) as ChatMessage[]
 
     const now = Date.now()
     const userMsgId = uid()
     db.prepare(`
       INSERT INTO chat_messages (id, plan_id, role, text, created_at)
       VALUES (?, ?, 'user', ?, ?)
-    `).run(userMsgId, req.params.id, message, now)
+    `).run(userMsgId, id, sanitizedMessage, now)
 
-    const { text: reply, ai } = await askAssistant(plan, history, message)
+    const { text: reply, ai } = await askAssistant(plan, history, sanitizedMessage)
     const assistantMsgId = uid()
     db.prepare(`
       INSERT INTO chat_messages (id, plan_id, role, text, created_at)
       VALUES (?, ?, 'assistant', ?, ?)
-    `).run(assistantMsgId, req.params.id, reply, now + 1)
+    `).run(assistantMsgId, id, reply, now + 1)
 
     return res.json({
-      userMessage: { id: userMsgId, role: 'user', text: message, createdAt: now },
+      userMessage: { id: userMsgId, role: 'user', text: sanitizedMessage, createdAt: now },
       reply: { id: assistantMsgId, role: 'assistant', text: reply, createdAt: now + 1 },
       ai,
     })
@@ -491,7 +581,8 @@ plansRouter.post('/:id/chat', async (req, res, next) => {
 // GET /api/plans/:id/export.ics - Calendar file export
 plansRouter.get('/:id/export.ics', (req, res, next) => {
   try {
-    const plan = loadFullPlan(req.params.id, req.user!.id)
+    const { id } = idParamSchema.parse(req.params)
+    const plan = loadFullPlan(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const icsContent = buildICS(plan)
@@ -503,18 +594,16 @@ plansRouter.get('/:id/export.ics', (req, res, next) => {
   }
 })
 
-const moodboardBodySchema = z.object({
-  extra: z.string().max(1000).optional(),
-})
-
 // POST /api/plans/:id/moodboard - Generate or regenerate moodboard
 plansRouter.post('/:id/moodboard', async (req, res, next) => {
   try {
-    const plan = loadFullPlan(req.params.id, req.user!.id)
+    const { id } = idParamSchema.parse(req.params)
+    const plan = loadFullPlan(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const parsed = moodboardBodySchema.parse(req.body || {})
-    const { moodboard, generatedBy } = await generateMoodboard(plan.brief, parsed.extra)
+    const sanitizedExtra = parsed.extra ? sanitizeText(parsed.extra) : undefined
+    const { moodboard, generatedBy } = await generateMoodboard(plan.brief, sanitizedExtra)
 
     const db = getDb()
     const rowId = uid()
@@ -542,7 +631,8 @@ plansRouter.post('/:id/moodboard', async (req, res, next) => {
 // GET /api/plans/:id/moodboard - Fetch saved moodboard
 plansRouter.get('/:id/moodboard', (req, res, next) => {
   try {
-    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
+    const { id } = idParamSchema.parse(req.params)
+    const plan = verifyPlanOwnership(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const db = getDb()
@@ -567,7 +657,8 @@ plansRouter.get('/:id/moodboard', (req, res, next) => {
 // POST /api/plans/:id/share - Enable share link and return random 24-char URL-safe token
 plansRouter.post('/:id/share', (req, res, next) => {
   try {
-    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
+    const { id } = idParamSchema.parse(req.params)
+    const plan = verifyPlanOwnership(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const db = getDb()
@@ -590,7 +681,8 @@ plansRouter.post('/:id/share', (req, res, next) => {
 // DELETE /api/plans/:id/share - Revoke share link
 plansRouter.delete('/:id/share', (req, res, next) => {
   try {
-    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
+    const { id } = idParamSchema.parse(req.params)
+    const plan = verifyPlanOwnership(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const db = getDb()
@@ -610,7 +702,8 @@ plansRouter.delete('/:id/share', (req, res, next) => {
 // GET /api/plans/:id/share - Get share status
 plansRouter.get('/:id/share', (req, res, next) => {
   try {
-    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
+    const { id } = idParamSchema.parse(req.params)
+    const plan = verifyPlanOwnership(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const db = getDb()
@@ -625,34 +718,14 @@ plansRouter.get('/:id/share', (req, res, next) => {
   }
 })
 
-const guestCreateSchema = z.object({
-  name: z.string().trim().min(1).max(100),
-  party: z.number().int().min(1).max(10).default(1),
-  status: z.enum(['pending', 'attending', 'declined']).default('pending'),
-  dietary: z.enum(['none', 'veg', 'vegan', 'jain', 'halal', 'other']).default('none'),
-  notes: z.string().max(500).default(''),
-})
-
-const guestPatchSchema = z.object({
-  name: z.string().trim().min(1).max(100).optional(),
-  party: z.number().int().min(1).max(10).optional(),
-  status: z.enum(['pending', 'attending', 'declined']).optional(),
-  dietary: z.enum(['none', 'veg', 'vegan', 'jain', 'halal', 'other']).optional(),
-  notes: z.string().max(500).optional(),
-})
-
-const guestImportSchema = z.object({
-  text: z.string().max(100000),
-})
-
 // GET /api/plans/:id/guests - List all guests with pagination
 plansRouter.get('/:id/guests', (req, res, next) => {
   try {
-    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
+    const { id } = idParamSchema.parse(req.params)
+    const plan = verifyPlanOwnership(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
-    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 100, 1), 500)
-    const offset = Math.max(parseInt(req.query.offset as string) || 0, 0)
+    const { limit, offset } = paginationQuerySchema.parse(req.query)
 
     const countStmt = getStatement('SELECT COUNT(*) as count FROM guests WHERE plan_id = ?')
     const total = (countStmt.get(plan.id) as { count: number }).count
@@ -672,25 +745,28 @@ plansRouter.get('/:id/guests', (req, res, next) => {
 // POST /api/plans/:id/guests - Add a guest
 plansRouter.post('/:id/guests', (req, res, next) => {
   try {
-    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
+    const { id } = idParamSchema.parse(req.params)
+    const plan = verifyPlanOwnership(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const parsed = guestCreateSchema.parse(req.body)
+    const name = sanitizeText(parsed.name)
+    const notes = sanitizeText(parsed.notes)
     const guestId = uid()
     const db = getDb()
 
     db.prepare(`
       INSERT INTO guests (id, plan_id, name, party, status, dietary, notes)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(guestId, plan.id, parsed.name, parsed.party, parsed.status, parsed.dietary, parsed.notes)
+    `).run(guestId, plan.id, name, parsed.party, parsed.status, parsed.dietary, notes)
 
     const created: Guest = {
       id: guestId,
-      name: parsed.name,
+      name,
       party: parsed.party,
       status: parsed.status,
       dietary: parsed.dietary,
-      notes: parsed.notes,
+      notes,
     }
 
     return res.status(201).json({ guest: created })
@@ -702,7 +778,8 @@ plansRouter.post('/:id/guests', (req, res, next) => {
 // PATCH /api/plans/:id/guests/:guestId - Update guest
 plansRouter.patch('/:id/guests/:guestId', (req, res, next) => {
   try {
-    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
+    const { id, guestId } = guestParamSchema.parse(req.params)
+    const plan = verifyPlanOwnership(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const parsed = guestPatchSchema.parse(req.body)
@@ -710,17 +787,17 @@ plansRouter.patch('/:id/guests/:guestId', (req, res, next) => {
     const existing = db.prepare(`
       SELECT id, name, party, status, dietary, notes FROM guests
       WHERE id = ? AND plan_id = ?
-    `).get(req.params.guestId, plan.id) as Guest | undefined
+    `).get(guestId, plan.id) as Guest | undefined
 
     if (!existing) return res.status(404).json({ error: 'Guest not found' })
 
     const updated: Guest = {
       id: existing.id,
-      name: parsed.name ?? existing.name,
+      name: parsed.name !== undefined ? sanitizeText(parsed.name) : existing.name,
       party: parsed.party ?? existing.party,
       status: parsed.status ?? existing.status,
       dietary: parsed.dietary ?? existing.dietary,
-      notes: parsed.notes ?? existing.notes,
+      notes: parsed.notes !== undefined ? sanitizeText(parsed.notes) : existing.notes,
     }
 
     db.prepare(`
@@ -737,13 +814,14 @@ plansRouter.patch('/:id/guests/:guestId', (req, res, next) => {
 // DELETE /api/plans/:id/guests/:guestId - Remove guest
 plansRouter.delete('/:id/guests/:guestId', (req, res, next) => {
   try {
-    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
+    const { id, guestId } = guestParamSchema.parse(req.params)
+    const plan = verifyPlanOwnership(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const db = getDb()
     const result = db.prepare(`
       DELETE FROM guests WHERE id = ? AND plan_id = ?
-    `).run(req.params.guestId, plan.id)
+    `).run(guestId, plan.id)
 
     if (result.changes === 0) {
       return res.status(404).json({ error: 'Guest not found' })
@@ -758,13 +836,14 @@ plansRouter.delete('/:id/guests/:guestId', (req, res, next) => {
 // POST /api/plans/:id/guests/import - Bulk import pasted list (one name per line, max 500)
 plansRouter.post('/:id/guests/import', (req, res, next) => {
   try {
-    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
+    const { id } = idParamSchema.parse(req.params)
+    const plan = verifyPlanOwnership(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const parsed = guestImportSchema.parse(req.body)
     const lines = parsed.text
       .split(/\r?\n/)
-      .map((l) => l.trim())
+      .map((l) => sanitizeText(l))
       .filter((l) => l.length > 0)
 
     if (lines.length > 500) {
@@ -784,11 +863,12 @@ plansRouter.post('/:id/guests/import', (req, res, next) => {
         VALUES (?, ?, ?, 1, 'pending', 'none', '')
       `)
       for (const name of lines) {
-        const id = uid()
-        stmt.run(id, plan.id, name.slice(0, 100))
+        const guestId = uid()
+        const trimmed = name.slice(0, 100)
+        stmt.run(guestId, plan.id, trimmed)
         insertedGuests.push({
-          id,
-          name: name.slice(0, 100),
+          id: guestId,
+          name: trimmed,
           party: 1,
           status: 'pending',
           dietary: 'none',
@@ -808,7 +888,8 @@ plansRouter.post('/:id/guests/import', (req, res, next) => {
 // GET /api/plans/:id/guests/summary - Summary stats, confirmed headcount, and catering cost per head
 plansRouter.get('/:id/guests/summary', (req, res, next) => {
   try {
-    const plan = verifyPlanOwnership(req.params.id, req.user!.id)
+    const { id } = idParamSchema.parse(req.params)
+    const plan = verifyPlanOwnership(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const db = getDb()
@@ -874,7 +955,8 @@ plansRouter.get('/:id/guests/summary', (req, res, next) => {
 // POST /api/plans/:id/budget/rebalance - Returns PROPOSAL only (no database write)
 plansRouter.post('/:id/budget/rebalance', async (req, res, next) => {
   try {
-    const plan = loadFullPlan(req.params.id, req.user!.id)
+    const { id } = idParamSchema.parse(req.params)
+    const plan = loadFullPlan(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const result = await rebalanceBudget(plan.brief, plan.budget)
@@ -884,17 +966,11 @@ plansRouter.post('/:id/budget/rebalance', async (req, res, next) => {
   }
 })
 
-const applyRebalanceSchema = z.object({
-  changes: z.array(z.object({
-    itemId: z.string(),
-    to: z.number().nonnegative(),
-  })).min(1),
-})
-
 // POST /api/plans/:id/budget/apply - Apply the proposed changes in an atomic transaction
 plansRouter.post('/:id/budget/apply', (req, res, next) => {
   try {
-    const plan = loadFullPlan(req.params.id, req.user!.id)
+    const { id } = idParamSchema.parse(req.params)
+    const plan = loadFullPlan(id, req.user!.id)
     if (!plan) return res.status(404).json({ error: 'Plan not found' })
 
     const parsed = applyRebalanceSchema.parse(req.body)
@@ -917,6 +993,3 @@ plansRouter.post('/:id/budget/apply', (req, res, next) => {
     next(err)
   }
 })
-
-
-

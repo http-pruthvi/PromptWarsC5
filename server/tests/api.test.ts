@@ -6,6 +6,8 @@ import { fileURLToPath } from 'url'
 import os from 'os'
 import { app } from '../src/app.js'
 import { initDb, closeDb } from '../src/db/index.js'
+import { escapeICSText, foldICSLine } from '../src/services/ics.js'
+import { sanitizeText } from '../src/utils/sanitize.js'
 
 const TEST_DB = path.resolve(os.tmpdir(), `soiree-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.db`)
 
@@ -956,6 +958,172 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       expect(Array.isArray(chatRes.body.messages)).toBe(true)
       expect(chatRes.body.limit).toBe(5)
       expect(chatRes.body.offset).toBe(0)
+    })
+  })
+
+  describe('11. Section B.2 Security & Robustness Verification', () => {
+    let authCookie: string
+    let testPlanId: string
+
+    beforeAll(async () => {
+      const reg = await request(app)
+        .post('/api/auth/register')
+        .send({ email: 'secb2@soiree.com', password: 'password123' })
+      authCookie = reg.headers['set-cookie'][0]
+
+      const planRes = await request(app)
+        .post('/api/plans')
+        .set('Cookie', authCookie)
+        .send({
+          type: 'wedding',
+          title: 'Royal Palace Celebration',
+          date: '2027-04-10',
+          guests: 150,
+          budget: 5000000,
+          currency: 'INR',
+          city: 'Jaipur',
+        })
+      testPlanId = planRes.body.plan.id
+    })
+
+    describe('Strict Zod Validation (rejects unexpected keys, invalid params, invalid queries)', () => {
+      it('rejects unexpected body keys on brief creation with 400', async () => {
+        const res = await request(app)
+          .post('/api/plans')
+          .set('Cookie', authCookie)
+          .send({
+            type: 'wedding',
+            date: '2027-04-10',
+            guests: 100,
+            budget: 1000000,
+            unexpectedField: 'malicious-data',
+          })
+
+        expect(res.status).toBe(400)
+        expect(res.body.error).toBe('Validation failed')
+      })
+
+      it('rejects unexpected body keys on register and login with 400', async () => {
+        const regRes = await request(app)
+          .post('/api/auth/register')
+          .send({
+            email: 'hacker@soiree.com',
+            password: 'password123',
+            isAdmin: true,
+          })
+        expect(regRes.status).toBe(400)
+
+        const loginRes = await request(app)
+          .post('/api/auth/login')
+          .send({
+            email: 'hacker@soiree.com',
+            password: 'password123',
+            role: 'superuser',
+          })
+        expect(loginRes.status).toBe(400)
+      })
+
+      it('rejects invalid pagination queries with 400', async () => {
+        const res = await request(app)
+          .get('/api/plans?limit=not-a-number')
+          .set('Cookie', authCookie)
+
+        expect(res.status).toBe(400)
+      })
+
+      it('rejects unexpected query parameters on pagination with 400', async () => {
+        const res = await request(app)
+          .get('/api/plans?limit=10&injectedQuery=xyz')
+          .set('Cookie', authCookie)
+
+        expect(res.status).toBe(400)
+      })
+
+      it('rejects malformed public share token formats with 404', async () => {
+        const res = await request(app).get('/api/public/plans/bad$token!invalid')
+        expect(res.status).toBe(404)
+      })
+    })
+
+    describe('Request Body Size Limits', () => {
+      it('rejects oversized JSON payloads (>256KB) with HTTP 413', async () => {
+        // Generate payload slightly larger than 256KB
+        const bigString = 'A'.repeat(300 * 1024)
+        const res = await request(app)
+          .post(`/api/plans/${testPlanId}/chat`)
+          .set('Cookie', authCookie)
+          .send({ message: bigString })
+
+        expect(res.status).toBe(413)
+        expect(res.body.error).toBe('Payload too large')
+      })
+    })
+
+    describe('RFC 5545 ICS Escaping & Line Folding', () => {
+      it('correctly escapes backslashes, semicolons, commas, and newlines', () => {
+        const input = 'Notes: Dinner, drinks; bring a jacket \\ coat\nSecond line\r\nThird line'
+        const escaped = escapeICSText(input)
+        expect(escaped).toBe('Notes: Dinner\\, drinks\\; bring a jacket \\\\ coat\\nSecond line\\nThird line')
+      })
+
+      it('folds long ICS lines to maximum 75 octets with space continuation', () => {
+        const longLine = 'DESCRIPTION:This is an exceptionally detailed and magnificent description that spans well beyond the standard seventy-five character limit required by the iCalendar RFC specification.'
+        const folded = foldICSLine(longLine)
+        const lines = folded.split('\r\n')
+        expect(lines.length).toBeGreaterThan(1)
+        expect(lines[0].length).toBeLessThanOrEqual(75)
+        expect(lines[1].startsWith(' ')).toBe(true)
+      })
+    })
+
+    describe('HTML Sanitisation', () => {
+      it('neutralizes malicious HTML script and iframe tags in user input', () => {
+        const malicious = '<script>alert("XSS")</script><p>Welcome to our <b>gala</b></p><iframe src="evil.com"></iframe>'
+        const sanitized = sanitizeText(malicious)
+        expect(sanitized).not.toContain('<script>')
+        expect(sanitized).not.toContain('alert')
+        expect(sanitized).not.toContain('<iframe>')
+        expect(sanitized).toContain('Welcome to our gala')
+      })
+
+      it('strips javascript: pseudo-protocols and inline event handlers', () => {
+        const evil = '<a href="javascript:stealCookies()" onclick="steal()">Click me</a>'
+        const sanitized = sanitizeText(evil)
+        expect(sanitized).not.toContain('javascript:')
+        expect(sanitized).not.toContain('onclick=')
+      })
+
+      it('sanitizes user input saved in plan creation and guest tracker', async () => {
+        const planRes = await request(app)
+          .post('/api/plans')
+          .set('Cookie', authCookie)
+          .send({
+            type: 'community',
+            title: '<script>alert("hack")</script>Neighborhood Feast',
+            date: '2027-05-01',
+            guests: 40,
+            budget: 100000,
+            currency: 'INR',
+            notes: '<img src="x" onerror="steal()">Bring blankets',
+          })
+
+        expect(planRes.status).toBe(201)
+        expect(planRes.body.plan.brief.title).toBe('Neighborhood Feast')
+        expect(planRes.body.plan.brief.notes).toBe('Bring blankets')
+
+        const guestRes = await request(app)
+          .post(`/api/plans/${planRes.body.plan.id}/guests`)
+          .set('Cookie', authCookie)
+          .send({
+            name: '<script>evil()</script>Kavita Rao',
+            party: 1,
+            notes: '<iframe src="malware"></iframe>VIP Table',
+          })
+
+        expect(guestRes.status).toBe(201)
+        expect(guestRes.body.guest.name).toBe('Kavita Rao')
+        expect(guestRes.body.guest.notes).toBe('VIP Table')
+      })
     })
   })
 })

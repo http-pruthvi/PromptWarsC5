@@ -104,14 +104,14 @@ em { font-style: italic; }
 .mobile-drawer-footer { margin-top: auto; display: flex; flex-direction: column; gap: 12px; }
 
 /* ============================== hero ============================ */
-.hero { position: relative; min-height: 100svh; display: flex; align-items: center; overflow: hidden; isolation: isolate; }
+.hero { position: relative; min-height: 100svh; min-height: 640px; display: flex; align-items: center; overflow: hidden; isolation: isolate; }
 .hero-media { position: absolute; inset: 0; z-index: -2; }
 .hero-veil { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(247,239,229,.94) 0%, rgba(247,239,229,.72) 32%, rgba(247,239,229,0) 62%), linear-gradient(180deg, rgba(247,239,229,0) 70%, var(--cream) 100%); }
-.hero-inner { padding: 110px 0 70px; }
-.hero-copy { max-width: 620px; }
+.hero-inner { padding: 110px 0 70px; min-height: 100svh; display: flex; flex-direction: column; justify-content: center; }
+.hero-copy { max-width: 620px; min-height: 380px; }
 .eyebrow { display: inline-flex; align-items: center; gap: 10px; font-size: 12.5px; letter-spacing: .22em; text-transform: uppercase; color: var(--plum); padding: 8px 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--glass); backdrop-filter: blur(10px); }
 .eyebrow svg { color: var(--gold); }
-.hero h1 { font-size: clamp(48px, min(7vw, 11vh), 96px); margin: 22px 0 18px; }
+.hero h1 { font-size: clamp(48px, min(7vw, 11vh), 96px); margin: 22px 0 18px; min-height: clamp(160px, 20vw, 290px); }
 .hero h1 .line { display: block; overflow: hidden; padding-bottom: .08em; }
 .hero .lede { font-size: clamp(16px, 1.5vw, 19px); color: var(--muted); max-width: 500px; }
 .cta-row { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 34px; }
@@ -276,6 +276,7 @@ textarea.input { min-height: 96px; resize: vertical; }
 .tab.on { color: #fff; }
 .tab .pill { position: absolute; inset: 0; border-radius: 999px; background: linear-gradient(135deg, #6b4862, #4a3045); z-index: 0; }
 .tab > * { position: relative; z-index: 1; }
+.tab-content-area { min-height: 520px; contain: layout; }
 
 .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin-bottom: 22px; }
 .stat { padding: 20px 22px; border-radius: 20px; background: rgba(255,255,255,.72); border: 1px solid #fff; }
