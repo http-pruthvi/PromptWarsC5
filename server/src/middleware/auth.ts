@@ -7,6 +7,7 @@ export interface AuthenticatedUser {
   isGuest: boolean
 }
 
+/* eslint-disable @typescript-eslint/no-namespace */
 declare global {
   namespace Express {
     interface Request {
@@ -14,17 +15,14 @@ declare global {
     }
   }
 }
+/* eslint-enable @typescript-eslint/no-namespace */
 
 export const DEFAULT_JWT_SECRET = 'soiree-default-jwt-secret-do-not-use-in-real-prod'
 const JWT_SECRET = process.env.JWT_SECRET || DEFAULT_JWT_SECRET
 const COOKIE_NAME = 'soiree_token'
 
 export function signToken(user: AuthenticatedUser): string {
-  return jwt.sign(
-    { id: user.id, email: user.email, isGuest: user.isGuest },
-    JWT_SECRET,
-    { expiresIn: '30d' },
-  )
+  return jwt.sign({ id: user.id, email: user.email, isGuest: user.isGuest }, JWT_SECRET, { expiresIn: '30d' })
 }
 
 export function extractToken(req: Request): string | null {
@@ -81,24 +79,4 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     clearAuthCookie(res)
     return res.status(401).json({ error: 'Session expired or invalid. Please sign in again.' })
   }
-}
-
-function optionalAuth(req: Request, res: Response, next: NextFunction) {
-  const token = extractToken(req)
-  if (token) {
-    try {
-      const payload = jwt.verify(token, JWT_SECRET) as AuthenticatedUser
-      req.user = {
-        id: payload.id,
-        email: payload.email,
-        isGuest: Boolean(payload.isGuest),
-      }
-      if (req.cookies?.[COOKIE_NAME]) {
-        setAuthCookie(res, req.user)
-      }
-    } catch {
-      // Ignore invalid token in optionalAuth
-    }
-  }
-  next()
 }

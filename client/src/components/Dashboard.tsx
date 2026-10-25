@@ -23,7 +23,9 @@ export default function Dashboard({ plans, loading, onOpen, onDelete, onNew }: P
     <div className="dashboard-view">
       <div className="plan-head" style={{ marginBottom: 32 }}>
         <div>
-          <span className="badge" style={{ marginBottom: 8 }}>My Celebrations</span>
+          <span className="badge" style={{ marginBottom: 8 }}>
+            My Celebrations
+          </span>
           <h2 style={{ marginTop: 6, fontSize: 38 }}>Your Event Portfolio</h2>
           <p style={{ color: 'var(--muted)', marginTop: 4 }}>
             Manage your bespoke timelines, vendor shortlists, and orchestrated budgets.
@@ -37,7 +39,11 @@ export default function Dashboard({ plans, loading, onOpen, onDelete, onNew }: P
       </div>
 
       {loading ? (
-        <div style={{ display: 'grid', placeItems: 'center', minHeight: 220, padding: '40px 0' }} role="status" aria-label="Retrieving celebrations">
+        <div
+          style={{ display: 'grid', placeItems: 'center', minHeight: 220, padding: '40px 0' }}
+          role="status"
+          aria-label="Retrieving celebrations"
+        >
           <LoopingLotus />
           <p style={{ color: 'var(--muted)', marginTop: 14, fontSize: 14 }}>Retrieving your celebrations…</p>
         </div>
@@ -48,7 +54,19 @@ export default function Dashboard({ plans, loading, onOpen, onDelete, onNew }: P
           animate={{ opacity: 1, y: 0 }}
           style={{ textAlign: 'center', padding: '64px 24px' }}
         >
-          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(197, 160, 89, 0.12)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#c5a059', marginBottom: 18 }}>
+          <div
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: '50%',
+              background: 'rgba(197, 160, 89, 0.12)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#c5a059',
+              marginBottom: 18,
+            }}
+          >
             <Sparkles size={32} />
           </div>
           <h3 style={{ fontFamily: 'var(--serif)', fontSize: 32, marginBottom: 8 }}>No celebrations planned yet</h3>
@@ -82,7 +100,9 @@ export default function Dashboard({ plans, loading, onOpen, onDelete, onNew }: P
                 onClick={() => onOpen(p.id)}
               >
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}
+                  >
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       <span className="badge">{typeLabel[p.type] || p.type}</span>
                       <span className={`badge ${p.generatedBy === 'local' ? 'local' : ''}`}>
@@ -109,7 +129,16 @@ export default function Dashboard({ plans, loading, onOpen, onDelete, onNew }: P
                     {p.title || `Bespoke ${typeLabel[p.type] || 'Event'}`}
                   </h3>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, color: 'var(--muted)', fontSize: 13, marginBottom: 16 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6,
+                      color: 'var(--muted)',
+                      fontSize: 13,
+                      marginBottom: 16,
+                    }}
+                  >
                     <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <CalendarDays size={14} /> {fmtDate(new Date(p.date + 'T00:00:00'))} · {daysLeft} days to go
                     </span>
@@ -123,13 +152,43 @@ export default function Dashboard({ plans, loading, onOpen, onDelete, onNew }: P
                     )}
                   </div>
 
-                  <p style={{ fontSize: 13, color: 'var(--text)', opacity: 0.8, lineHeight: 1.5, margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  <p
+                    style={{
+                      fontSize: 13,
+                      color: 'var(--text)',
+                      opacity: 0.8,
+                      lineHeight: 1.5,
+                      margin: 0,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                    }}
+                  >
                     {p.summary}
                   </p>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginTop: 20, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#c5a059', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    marginTop: 20,
+                    paddingTop: 14,
+                    borderTop: '1px solid var(--border)',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: '#c5a059',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
                     Open plan <ArrowRight size={14} />
                   </span>
                 </div>

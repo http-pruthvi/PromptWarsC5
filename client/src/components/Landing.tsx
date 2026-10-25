@@ -1,14 +1,21 @@
 import { animate, motion, useMotionValue, useReducedMotion, useScroll, useSpring, useTransform } from 'framer-motion'
-import {
-  ArrowRight, CalendarCheck, Check, Gem, PiggyBank, Sparkles, Store,
-} from 'lucide-react'
+import { ArrowRight, CalendarCheck, Check, Gem, PiggyBank, Sparkles, Store } from 'lucide-react'
 import { useRef } from 'react'
 import type { EventType } from '@soiree/shared'
 import { DonutChart, PALETTE, Reveal, Ribbon, spotlight } from './common'
 import { VectorScene } from './VectorScene'
 import {
-  BurstButton, CursorSparkles, FeatureIcon, FloralCorner, OccasionArt, Parallax, Pearls, ScrollLotus,
-  SectionOrnament, Sparkle, Sprig,
+  BurstButton,
+  CursorSparkles,
+  FeatureIcon,
+  FloralCorner,
+  OccasionArt,
+  Parallax,
+  Pearls,
+  ScrollLotus,
+  SectionOrnament,
+  Sparkle,
+  Sprig,
 } from './Vectors'
 import type { IconName } from './Vectors'
 import { LotusBloom } from './Vectors'
@@ -18,13 +25,25 @@ interface Props {
 }
 
 const MARQUEE = [
-  'Weddings', 'Sangeet nights', 'Birthdays', 'Baby showers', 'Anniversaries', 'Garba evenings',
-  'Community fairs', 'Cultural fests', 'Charity drives', 'Reunions', 'Housewarmings',
+  'Weddings',
+  'Sangeet nights',
+  'Birthdays',
+  'Baby showers',
+  'Anniversaries',
+  'Garba evenings',
+  'Community fairs',
+  'Cultural fests',
+  'Charity drives',
+  'Reunions',
+  'Housewarmings',
 ]
 
 const lineVariants = {
   hidden: { y: '110%' },
-  show: (i: number) => ({ y: 0, transition: { duration: 1.1, delay: 0.25 + i * 0.14, ease: [0.22, 1, 0.36, 1] as const } }),
+  show: (i: number) => ({
+    y: 0,
+    transition: { duration: 1.1, delay: 0.25 + i * 0.14, ease: [0.22, 1, 0.36, 1] as const },
+  }),
 }
 
 function Hero({ onStart }: Props) {
@@ -58,58 +77,130 @@ function Hero({ onStart }: Props) {
 
       <div className="wrap hero-inner">
         <motion.div className="hero-copy" style={{ y: reduce ? 0 : copyY, opacity: reduce ? 1 : copyOpacity }}>
-          <motion.span className="eyebrow" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9 }}>
+          <motion.span
+            className="eyebrow"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.9 }}
+          >
             <Sparkles size={14} /> GenAI event planning
           </motion.span>
 
           <h1>
             {['Celebrations,', 'composed with'].map((t, i) => (
               <span className="line" key={t}>
-                <motion.span style={{ display: 'block' }} custom={i} variants={lineVariants} initial="hidden" animate="show">
+                <motion.span
+                  style={{ display: 'block' }}
+                  custom={i}
+                  variants={lineVariants}
+                  initial="hidden"
+                  animate="show"
+                >
                   {t}
                 </motion.span>
               </span>
             ))}
             <span className="line">
-              <motion.span style={{ display: 'block' }} custom={2} variants={lineVariants} initial="hidden" animate="show">
+              <motion.span
+                style={{ display: 'block' }}
+                custom={2}
+                variants={lineVariants}
+                initial="hidden"
+                animate="show"
+              >
                 <em className="gold-text">intelligence.</em>
               </motion.span>
             </span>
           </h1>
 
-          <motion.p className="lede" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, delay: 0.9 }}>
+          <motion.p
+            className="lede"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.9 }}
+          >
             Soirée is your AI planning assistant for weddings, birthdays and community events — budgets that balance,
             timelines that run themselves, vendor checklists and ideas that feel like you.
           </motion.p>
 
-          <motion.div className="cta-row" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, delay: 1.1 }}>
+          <motion.div
+            className="cta-row"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 1.1 }}
+          >
             <BurstButton className="btn btn-primary" onActivate={() => onStart()}>
               Plan my event <ArrowRight size={18} />
             </BurstButton>
-            <a className="btn btn-ghost" href="#/features" onClick={(e) => { e.preventDefault(); document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }) }}>
+            <a
+              className="btn btn-ghost"
+              href="#/features"
+              onClick={(e) => {
+                e.preventDefault()
+                document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })
+              }}
+            >
               See how it works
             </a>
           </motion.div>
 
-          <motion.div className="trust" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1.2, delay: 1.4 }}>
-            <div><strong>3</strong>event types</div>
-            <div><strong>40+</strong>milestones</div>
-            <div><strong>60s</strong>to a full plan</div>
+          <motion.div
+            className="trust"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1.2, delay: 1.4 }}
+          >
+            <div>
+              <strong>3</strong>event types
+            </div>
+            <div>
+              <strong>40+</strong>milestones
+            </div>
+            <div>
+              <strong>60s</strong>to a full plan
+            </div>
           </motion.div>
         </motion.div>
       </div>
 
-      <motion.div className="float-chip chip-c" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.8, duration: 0.8 }}>
-        <i><CalendarCheck size={18} /></i>
-        <span>Timeline<b>24 weeks, 12 milestones</b></span>
+      <motion.div
+        className="float-chip chip-c"
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 1.8, duration: 0.8 }}
+      >
+        <i>
+          <CalendarCheck size={18} />
+        </i>
+        <span>
+          Timeline<b>24 weeks, 12 milestones</b>
+        </span>
       </motion.div>
-      <motion.div className="float-chip chip-a" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 2.1, duration: 0.8 }}>
-        <i><PiggyBank size={18} /></i>
-        <span>Budget balanced<b>₹12,00,000 · 8 categories</b></span>
+      <motion.div
+        className="float-chip chip-a"
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 2.1, duration: 0.8 }}
+      >
+        <i>
+          <PiggyBank size={18} />
+        </i>
+        <span>
+          Budget balanced<b>₹12,00,000 · 8 categories</b>
+        </span>
       </motion.div>
-      <motion.div className="float-chip chip-b" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 2.4, duration: 0.8 }}>
-        <i><Store size={18} /></i>
-        <span>Vendors<b>3 of 9 booked</b></span>
+      <motion.div
+        className="float-chip chip-b"
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 2.4, duration: 0.8 }}
+      >
+        <i>
+          <Store size={18} />
+        </i>
+        <span>
+          Vendors<b>3 of 9 booked</b>
+        </span>
       </motion.div>
 
       <div className="scroll-cue" aria-hidden />
@@ -131,30 +222,64 @@ function Marquee() {
 }
 
 const FEATURES: Array<{ icon: IconName; title: string; text: string }> = [
-  { icon: 'budget', title: 'Smart budgets', text: 'Tell us your total and guest count. We split it across categories, track every rupee spent and warn you before you overshoot.' },
-  { icon: 'timeline', title: 'Adaptive timelines', text: 'Milestones counted back from your date — automatically compressed when you are short on time. Export to your calendar.' },
-  { icon: 'vendors', title: 'Vendor checklists', text: 'From venue to makeup artist: budget estimates, status tracking and insider tips for every vendor you need to book.' },
-  { icon: 'ideas', title: 'Personalised ideas', text: 'Themes, menus, entertainment and guest touches tuned to your vibe, city and crowd — shuffle until it feels right.' },
-  { icon: 'chat', title: 'Ask Soirée', text: 'A planning companion that knows your budget, tasks and vendors. Ask how to save, what to do next, or for a fresh idea.' },
-  { icon: 'export', title: 'Share & export', text: 'Print a clean plan, download a calendar file, and keep everything saved privately in your browser.' },
+  {
+    icon: 'budget',
+    title: 'Smart budgets',
+    text: 'Tell us your total and guest count. We split it across categories, track every rupee spent and warn you before you overshoot.',
+  },
+  {
+    icon: 'timeline',
+    title: 'Adaptive timelines',
+    text: 'Milestones counted back from your date — automatically compressed when you are short on time. Export to your calendar.',
+  },
+  {
+    icon: 'vendors',
+    title: 'Vendor checklists',
+    text: 'From venue to makeup artist: budget estimates, status tracking and insider tips for every vendor you need to book.',
+  },
+  {
+    icon: 'ideas',
+    title: 'Personalised ideas',
+    text: 'Themes, menus, entertainment and guest touches tuned to your vibe, city and crowd — shuffle until it feels right.',
+  },
+  {
+    icon: 'chat',
+    title: 'Ask Soirée',
+    text: 'A planning companion that knows your budget, tasks and vendors. Ask how to save, what to do next, or for a fresh idea.',
+  },
+  {
+    icon: 'export',
+    title: 'Share & export',
+    text: 'Print a clean plan, download a calendar file, and keep everything saved privately in your browser.',
+  },
 ]
 
 function Features() {
   return (
     <section className="section" id="features">
-      <Parallax className="deco-r" speed={50}><Pearls size={150} /></Parallax>
-      <Parallax className="deco-l" speed={80}><Sprig size={120} /></Parallax>
+      <Parallax className="deco-r" speed={50}>
+        <Pearls size={150} />
+      </Parallax>
+      <Parallax className="deco-l" speed={80}>
+        <Sprig size={120} />
+      </Parallax>
       <div className="wrap">
         <Reveal className="section-head">
           <span className="kicker">Everything in one place</span>
-          <h2>Every detail, <em>gracefully</em> handled.</h2>
-          <p>Stop juggling spreadsheets and chat groups. Soirée turns a few answers into a plan you can actually run.</p>
+          <h2>
+            Every detail, <em>gracefully</em> handled.
+          </h2>
+          <p>
+            Stop juggling spreadsheets and chat groups. Soirée turns a few answers into a plan you can actually run.
+          </p>
         </Reveal>
         <div className="grid-4">
           {FEATURES.map((f, i) => (
             <Reveal key={f.title} delay={(i % 3) * 0.1}>
               <div className="card" onMouseMove={spotlight} style={{ height: '100%' }}>
-                <div className="icon-orb"><FeatureIcon name={f.icon} /></div>
+                <div className="icon-orb">
+                  <FeatureIcon name={f.icon} />
+                </div>
                 <h3>{f.title}</h3>
                 <p>{f.text}</p>
               </div>
@@ -169,18 +294,31 @@ function Features() {
 function HowItWorks() {
   const ref = useRef<HTMLElement>(null)
   const steps = [
-    { t: 'Share the occasion', p: 'Pick wedding, birthday or community event, then add date, guests, budget, city and the vibe you imagine.' },
-    { t: 'AI composes your plan', p: 'In moments you get a balanced budget, a countdown timeline, a vendor checklist and a set of tailored ideas.' },
-    { t: 'Refine and track', p: 'Edit numbers, tick off milestones, book vendors and ask Soirée anything. Your plan updates as you go.' },
+    {
+      t: 'Share the occasion',
+      p: 'Pick wedding, birthday or community event, then add date, guests, budget, city and the vibe you imagine.',
+    },
+    {
+      t: 'AI composes your plan',
+      p: 'In moments you get a balanced budget, a countdown timeline, a vendor checklist and a set of tailored ideas.',
+    },
+    {
+      t: 'Refine and track',
+      p: 'Edit numbers, tick off milestones, book vendors and ask Soirée anything. Your plan updates as you go.',
+    },
   ]
   return (
     <section className="section" id="how" ref={ref}>
       <div className="wrap">
         <Reveal className="section-head center">
           <span className="kicker">How it works</span>
-          <h2>From idea to itinerary in <em>three</em> steps.</h2>
+          <h2>
+            From idea to itinerary in <em>three</em> steps.
+          </h2>
         </Reveal>
-        <div className="bloom-stage"><ScrollLotus target={ref} size={300} /></div>
+        <div className="bloom-stage">
+          <ScrollLotus target={ref} size={300} />
+        </div>
         <div className="steps">
           {steps.map((s, i) => (
             <Reveal key={s.t} delay={i * 0.15} className="step">
@@ -196,16 +334,36 @@ function HowItWorks() {
 
 function Occasions({ onStart }: Props) {
   const cards: Array<{ type: EventType; title: string; text: string; bg: string; tags: string[] }> = [
-    { type: 'wedding', title: 'Weddings', text: 'Multi-day celebrations with rituals, guests and vendors to coordinate.', bg: 'bg-wed', tags: ['Venue', 'Catering', 'Sangeet', 'Stay'] },
-    { type: 'birthday', title: 'Birthdays', text: 'Milestone parties and surprises with games, cake and unforgettable moments.', bg: 'bg-bday', tags: ['Theme', 'Cake', 'Games', 'Favours'] },
-    { type: 'community', title: 'Community events', text: 'Fests, drives and gatherings with committees, permits and volunteers.', bg: 'bg-comm', tags: ['Permits', 'Volunteers', 'Sound', 'Outreach'] },
+    {
+      type: 'wedding',
+      title: 'Weddings',
+      text: 'Multi-day celebrations with rituals, guests and vendors to coordinate.',
+      bg: 'bg-wed',
+      tags: ['Venue', 'Catering', 'Sangeet', 'Stay'],
+    },
+    {
+      type: 'birthday',
+      title: 'Birthdays',
+      text: 'Milestone parties and surprises with games, cake and unforgettable moments.',
+      bg: 'bg-bday',
+      tags: ['Theme', 'Cake', 'Games', 'Favours'],
+    },
+    {
+      type: 'community',
+      title: 'Community events',
+      text: 'Fests, drives and gatherings with committees, permits and volunteers.',
+      bg: 'bg-comm',
+      tags: ['Permits', 'Volunteers', 'Sound', 'Outreach'],
+    },
   ]
   return (
     <section className="section" id="occasions">
       <div className="wrap">
         <Reveal className="section-head">
           <span className="kicker">Occasions</span>
-          <h2>Made for the moments <em>that matter.</em></h2>
+          <h2>
+            Made for the moments <em>that matter.</em>
+          </h2>
         </Reveal>
         <div className="types">
           {cards.map((c, i) => (
@@ -215,7 +373,11 @@ function Occasions({ onStart }: Props) {
                 <OccasionArt type={c.type} />
                 <h3>{c.title}</h3>
                 <p>{c.text}</p>
-                <ul>{c.tags.map((t) => <li key={t}>{t}</li>)}</ul>
+                <ul>
+                  {c.tags.map((t) => (
+                    <li key={t}>{t}</li>
+                  ))}
+                </ul>
               </button>
             </Reveal>
           ))}
@@ -241,14 +403,20 @@ function Preview({ onStart }: Props) {
   ]
   return (
     <section className="section" id="preview">
-      <Parallax className="deco-l2" speed={60} spin={20}><Sparkle size={54} /></Parallax>
+      <Parallax className="deco-l2" speed={60} spin={20}>
+        <Sparkle size={54} />
+      </Parallax>
       <div className="wrap preview">
         <Reveal>
           <div className="mock">
             <FloralCorner pos="tr" />
             <div className="mock-head">
               <h4>Aarav &amp; Meera</h4>
-              <div className="dots"><i /><i /><i /></div>
+              <div className="dots">
+                <i />
+                <i />
+                <i />
+              </div>
             </div>
             <div className="mock-body">
               <DonutChart data={data} centerLabel="Budget" centerValue="₹12L" />
@@ -276,14 +444,33 @@ function Preview({ onStart }: Props) {
         <Reveal delay={0.15}>
           <span className="kicker">Live preview</span>
           <div className="section-head" style={{ marginBottom: 0 }}>
-            <h2>A plan that <em>breathes</em> with you.</h2>
+            <h2>
+              A plan that <em>breathes</em> with you.
+            </h2>
           </div>
           <ul className="bullets">
-            <li><Gem size={20} /><span><b>Budgets that stay honest.</b> Edit any category and see totals, remaining and warnings instantly.</span></li>
-            <li><CalendarCheck size={20} /><span><b>Countdown to the big day.</b> Every milestone has a real due date and flags what is running late.</span></li>
-            <li><Sparkles size={20} /><span><b>Powered by Gemini.</b> Add your key for fully generative plans, or use the built-in planner offline.</span></li>
+            <li>
+              <Gem size={20} />
+              <span>
+                <b>Budgets that stay honest.</b> Edit any category and see totals, remaining and warnings instantly.
+              </span>
+            </li>
+            <li>
+              <CalendarCheck size={20} />
+              <span>
+                <b>Countdown to the big day.</b> Every milestone has a real due date and flags what is running late.
+              </span>
+            </li>
+            <li>
+              <Sparkles size={20} />
+              <span>
+                <b>Powered by Gemini.</b> Add your key for fully generative plans, or use the built-in planner offline.
+              </span>
+            </li>
           </ul>
-          <BurstButton className="btn btn-primary" onActivate={() => onStart()}>Try it now <ArrowRight size={18} /></BurstButton>
+          <BurstButton className="btn btn-primary" onActivate={() => onStart()}>
+            Try it now <ArrowRight size={18} />
+          </BurstButton>
         </Reveal>
       </div>
     </section>
@@ -293,14 +480,24 @@ function Preview({ onStart }: Props) {
 function FinalCta({ onStart }: Props) {
   return (
     <section className="cta">
-      <div className="hero-media" aria-hidden><VectorScene mirror /></div>
-      <Parallax className="deco-cta-l" speed={40}><Sprig size={110} /></Parallax>
-      <Parallax className="deco-cta-r" speed={60}><Pearls size={110} /></Parallax>
+      <div className="hero-media" aria-hidden>
+        <VectorScene mirror />
+      </div>
+      <Parallax className="deco-cta-l" speed={40}>
+        <Sprig size={110} />
+      </Parallax>
+      <Parallax className="deco-cta-r" speed={60}>
+        <Pearls size={110} />
+      </Parallax>
       <div className="wrap">
         <Reveal>
-          <h2>Your next celebration, <em className="gold-text">beautifully planned.</em></h2>
+          <h2>
+            Your next celebration, <em className="gold-text">beautifully planned.</em>
+          </h2>
           <p>No spreadsheets. No stress. Just a plan that feels as special as the occasion.</p>
-          <BurstButton className="btn btn-primary" onActivate={() => onStart()}>Start planning free <ArrowRight size={18} /></BurstButton>
+          <BurstButton className="btn btn-primary" onActivate={() => onStart()}>
+            Start planning free <ArrowRight size={18} />
+          </BurstButton>
         </Reveal>
       </div>
     </section>
@@ -311,7 +508,12 @@ function FooterLotus() {
   const p = useMotionValue(0)
   const ref = useRef<HTMLDivElement>(null)
   return (
-    <motion.div className="footer-lotus" ref={ref} onViewportEnter={() => animate(p, 1, { duration: 2.4, ease: [0.22, 1, 0.36, 1] })} viewport={{ once: true, margin: '-40px' }}>
+    <motion.div
+      className="footer-lotus"
+      ref={ref}
+      onViewportEnter={() => animate(p, 1, { duration: 2.4, ease: [0.22, 1, 0.36, 1] })}
+      viewport={{ once: true, margin: '-40px' }}
+    >
       <LotusBloom progress={p} size={140} line />
     </motion.div>
   )

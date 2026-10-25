@@ -7,15 +7,19 @@ import { uid } from '../services/generator.js'
 
 export const authRouter = Router()
 
-const registerSchema = z.object({
-  email: z.string().trim().email('Please enter a valid email address').max(254),
-  password: z.string().min(6, 'Password must be at least 6 characters long').max(128),
-}).strict()
+const registerSchema = z
+  .object({
+    email: z.string().trim().email('Please enter a valid email address').max(254),
+    password: z.string().min(6, 'Password must be at least 6 characters long').max(128),
+  })
+  .strict()
 
-const loginSchema = z.object({
-  email: z.string().trim().email('Please enter a valid email address').max(254),
-  password: z.string().min(1, 'Password is required').max(128),
-}).strict()
+const loginSchema = z
+  .object({
+    email: z.string().trim().email('Please enter a valid email address').max(254),
+    password: z.string().min(1, 'Password is required').max(128),
+  })
+  .strict()
 
 // POST /api/auth/register
 authRouter.post('/register', async (req, res, next) => {
@@ -34,10 +38,12 @@ authRouter.post('/register', async (req, res, next) => {
     const id = uid()
     const now = Date.now()
 
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO users (id, email, password_hash, is_guest, created_at)
       VALUES (?, ?, ?, 0, ?)
-    `).run(id, normalizedEmail, hash, now)
+    `,
+    ).run(id, normalizedEmail, hash, now)
 
     const user = { id, email: normalizedEmail, isGuest: false }
     setAuthCookie(res, user)
@@ -47,6 +53,14 @@ authRouter.post('/register', async (req, res, next) => {
   }
 })
 
+interface UserRow {
+  id: string
+  email: string | null
+  password_hash: string | null
+  is_guest: number
+  created_at: number
+}
+
 // POST /api/auth/login
 authRouter.post('/login', async (req, res, next) => {
   try {
@@ -54,7 +68,9 @@ authRouter.post('/login', async (req, res, next) => {
     const normalizedEmail = email.toLowerCase().trim()
     const db = getDb()
 
-    const userRow = db.prepare('SELECT id, email, password_hash, is_guest, created_at FROM users WHERE email = ?').get(normalizedEmail) as any
+    const userRow = db
+      .prepare('SELECT id, email, password_hash, is_guest, created_at FROM users WHERE email = ?')
+      .get(normalizedEmail) as UserRow | undefined
     if (!userRow || !userRow.password_hash) {
       return res.status(401).json({ error: 'Invalid email or password' })
     }
@@ -79,10 +95,12 @@ authRouter.post('/guest', (_req, res, next) => {
     const id = `guest_${uid()}`
     const now = Date.now()
 
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO users (id, email, password_hash, is_guest, created_at)
       VALUES (?, NULL, NULL, 1, ?)
-    `).run(id, now)
+    `,
+    ).run(id, now)
 
     const user = { id, email: null, isGuest: true }
     setAuthCookie(res, user)
@@ -96,7 +114,8 @@ authRouter.post('/guest', (_req, res, next) => {
 authRouter.get('/me', requireAuth, (req, res, next) => {
   try {
     const db = getDb()
-    const userRow = db.prepare('SELECT id, email, is_guest, created_at FROM users WHERE id = ?').get(req.user!.id) as any
+    const userRow = db.prepare('SELECT id, email, is_guest, created_at FROM users WHERE id = ?').get(req.user!.id) as
+      UserRow | undefined
     if (!userRow) {
       clearAuthCookie(res)
       return res.status(401).json({ error: 'User not found' })

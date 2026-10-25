@@ -102,7 +102,7 @@ export function Navbar({ route, go, user, onOpenAuth, onLogout }: Props) {
                   style={{ fontSize: 11, padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4 }}
                   title={user.email || 'Guest demo user'}
                 >
-                  <UserIcon size={12} /> {user.isGuest ? 'Guest' : (user.email?.split('@')[0] || 'Member')}
+                  <UserIcon size={12} /> {user.isGuest ? 'Guest' : user.email?.split('@')[0] || 'Member'}
                 </span>
                 <button
                   className="btn btn-ghost btn-sm"
@@ -180,10 +180,42 @@ export function Navbar({ route, go, user, onOpenAuth, onLogout }: Props) {
               </div>
 
               <nav className="mobile-links" aria-label="Mobile Navigation Links">
-                <a href="#/features" onClick={(e) => { e.preventDefault(); navigateTo('features') }}>Features</a>
-                <a href="#/how" onClick={(e) => { e.preventDefault(); navigateTo('how') }}>How it works</a>
-                <a href="#/occasions" onClick={(e) => { e.preventDefault(); navigateTo('occasions') }}>Occasions</a>
-                <a href="#/preview" onClick={(e) => { e.preventDefault(); navigateTo('preview') }}>Preview</a>
+                <a
+                  href="#/features"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    navigateTo('features')
+                  }}
+                >
+                  Features
+                </a>
+                <a
+                  href="#/how"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    navigateTo('how')
+                  }}
+                >
+                  How it works
+                </a>
+                <a
+                  href="#/occasions"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    navigateTo('occasions')
+                  }}
+                >
+                  Occasions
+                </a>
+                <a
+                  href="#/preview"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    navigateTo('preview')
+                  }}
+                >
+                  Preview
+                </a>
               </nav>
 
               <div className="mobile-drawer-footer">
@@ -191,7 +223,10 @@ export function Navbar({ route, go, user, onOpenAuth, onLogout }: Props) {
                   <button
                     className="btn btn-primary"
                     style={{ width: '100%', justifyContent: 'center' }}
-                    onClick={() => { setOpen(false); go('planner') }}
+                    onClick={() => {
+                      setOpen(false)
+                      go('planner')
+                    }}
                   >
                     Start planning <ArrowRight size={16} />
                   </button>
@@ -199,7 +234,10 @@ export function Navbar({ route, go, user, onOpenAuth, onLogout }: Props) {
                   <button
                     className="btn btn-ghost"
                     style={{ width: '100%', justifyContent: 'center' }}
-                    onClick={() => { setOpen(false); go('home') }}
+                    onClick={() => {
+                      setOpen(false)
+                      go('home')
+                    }}
                   >
                     Back to home
                   </button>
@@ -209,15 +247,22 @@ export function Navbar({ route, go, user, onOpenAuth, onLogout }: Props) {
                   <button
                     className="btn btn-ghost btn-sm"
                     style={{ width: '100%', justifyContent: 'center' }}
-                    onClick={() => { setOpen(false); onLogout() }}
+                    onClick={() => {
+                      setOpen(false)
+                      onLogout()
+                    }}
                   >
-                    <LogOut size={14} style={{ marginRight: 6 }} /> Sign out ({user.isGuest ? 'Guest' : (user.email?.split('@')[0] || 'User')})
+                    <LogOut size={14} style={{ marginRight: 6 }} /> Sign out (
+                    {user.isGuest ? 'Guest' : user.email?.split('@')[0] || 'User'})
                   </button>
                 ) : (
                   <button
                     className="btn btn-ghost btn-sm"
                     style={{ width: '100%', justifyContent: 'center' }}
-                    onClick={() => { setOpen(false); onOpenAuth() }}
+                    onClick={() => {
+                      setOpen(false)
+                      onOpenAuth()
+                    }}
                   >
                     <LogIn size={14} style={{ marginRight: 6 }} /> Sign in to account
                   </button>

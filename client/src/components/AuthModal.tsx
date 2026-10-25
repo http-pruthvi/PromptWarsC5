@@ -30,8 +30,8 @@ export default function AuthModal({ onSuccess, onClose, initialMode = 'login' }:
         const res = await api.auth.login(email, password)
         onSuccess(res.user)
       }
-    } catch (err: any) {
-      setError(err.message || 'Authentication failed. Please check your credentials.')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Authentication failed. Please check your credentials.')
     } finally {
       setBusy(false)
     }
@@ -43,8 +43,8 @@ export default function AuthModal({ onSuccess, onClose, initialMode = 'login' }:
     try {
       const res = await api.auth.guest()
       onSuccess(res.user)
-    } catch (err: any) {
-      setError(err.message || 'Guest access unavailable.')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Guest access unavailable.')
     } finally {
       setBusy(false)
     }
@@ -73,25 +73,42 @@ export default function AuthModal({ onSuccess, onClose, initialMode = 'login' }:
         )}
 
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
-          <span className="badge" style={{ marginBottom: 10 }}>Personal Event Concierge</span>
+          <span className="badge" style={{ marginBottom: 10 }}>
+            Personal Event Concierge
+          </span>
           <h3 style={{ fontFamily: 'var(--serif)', fontSize: 32, marginBottom: 6 }}>
             {mode === 'login' ? 'Welcome back to Soirée' : 'Begin your celebration'}
           </h3>
           <p style={{ color: 'var(--muted)', fontSize: 14 }}>
-            {mode === 'login' ? 'Access your saved luxury event plans & timelines' : 'Create an account to save and orchestrate events'}
+            {mode === 'login'
+              ? 'Access your saved luxury event plans & timelines'
+              : 'Create an account to save and orchestrate events'}
           </p>
         </div>
 
         {/* 1-Click Guest Access for Judges */}
-        <div style={{ marginBottom: 22, padding: 14, background: 'rgba(197, 160, 89, 0.08)', borderRadius: 14, border: '1px solid rgba(197, 160, 89, 0.25)' }}>
+        <div
+          style={{
+            marginBottom: 22,
+            padding: 14,
+            background: 'rgba(197, 160, 89, 0.08)',
+            borderRadius: 14,
+            border: '1px solid rgba(197, 160, 89, 0.25)',
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#8c6b2d', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span
+              style={{ fontSize: 13, fontWeight: 600, color: '#8c6b2d', display: 'flex', alignItems: 'center', gap: 6 }}
+            >
               <Sparkles size={14} /> Evaluation & Instant Demo
             </span>
-            <span className="badge local" style={{ fontSize: 11, padding: '2px 6px' }}>Zero-Config</span>
+            <span className="badge local" style={{ fontSize: 11, padding: '2px 6px' }}>
+              Zero-Config
+            </span>
           </div>
           <p style={{ fontSize: 12, color: 'var(--text)', opacity: 0.85, margin: '0 0 10px 0' }}>
-            Judging or testing? Skip registration and enter immediately as a guest. All features and plans persist in SQLite.
+            Judging or testing? Skip registration and enter immediately as a guest. All features and plans persist in
+            SQLite.
           </p>
           <button
             type="button"
@@ -106,7 +123,9 @@ export default function AuthModal({ onSuccess, onClose, initialMode = 'login' }:
 
         <div style={{ display: 'flex', alignItems: 'center', margin: '16px 0', gap: 12 }}>
           <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-          <span style={{ fontSize: 12, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>or account</span>
+          <span style={{ fontSize: 12, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            or account
+          </span>
           <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
         </div>
 
@@ -115,7 +134,10 @@ export default function AuthModal({ onSuccess, onClose, initialMode = 'login' }:
           <button
             type="button"
             className={`tab ${mode === 'login' ? 'on' : ''}`}
-            onClick={() => { setMode('login'); setError(null) }}
+            onClick={() => {
+              setMode('login')
+              setError(null)
+            }}
             style={{ flex: 1, justifyContent: 'center' }}
           >
             Sign In
@@ -123,7 +145,10 @@ export default function AuthModal({ onSuccess, onClose, initialMode = 'login' }:
           <button
             type="button"
             className={`tab ${mode === 'register' ? 'on' : ''}`}
-            onClick={() => { setMode('register'); setError(null) }}
+            onClick={() => {
+              setMode('register')
+              setError(null)
+            }}
             style={{ flex: 1, justifyContent: 'center' }}
           >
             Create Account

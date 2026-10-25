@@ -2,8 +2,8 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import request from 'supertest'
 import fs from 'fs'
 import path from 'path'
-import { fileURLToPath } from 'url'
 import os from 'os'
+import type { BudgetItem, Guest, Milestone } from '@soiree/shared'
 import { app } from '../src/app.js'
 import { initDb, closeDb } from '../src/db/index.js'
 import { escapeICSText, foldICSLine } from '../src/services/ics.js'
@@ -14,7 +14,11 @@ const TEST_DB = path.resolve(os.tmpdir(), `soiree-test-${Date.now()}-${Math.rand
 function cleanTestDb() {
   for (const f of [TEST_DB, `${TEST_DB}-wal`, `${TEST_DB}-shm`, `${TEST_DB}-journal`]) {
     if (fs.existsSync(f)) {
-      try { fs.unlinkSync(f) } catch {}
+      try {
+        fs.unlinkSync(f)
+      } catch {
+        // file may be locked or removed; safe to ignore in cleanup
+      }
     }
   }
 }
@@ -54,9 +58,7 @@ describe('Soirée Fullstack Backend Test Suite', () => {
     })
 
     it('verifies authenticated session via /api/auth/me', async () => {
-      const res = await request(app)
-        .get('/api/auth/me')
-        .set('Cookie', authCookie)
+      const res = await request(app).get('/api/auth/me').set('Cookie', authCookie)
 
       expect(res.status).toBe(200)
       expect(res.body.user.isGuest).toBe(true)
@@ -110,20 +112,17 @@ describe('Soirée Fullstack Backend Test Suite', () => {
     })
 
     it('creates a complete plan using the offline generator fallback', async () => {
-      const res = await request(app)
-        .post('/api/plans')
-        .set('Cookie', guestCookie)
-        .send({
-          type: 'wedding',
-          title: 'Aria & Rohan Nuptials',
-          date: '2027-02-14',
-          guests: 200,
-          budget: 2500000,
-          currency: 'INR',
-          city: 'Udaipur',
-          vibe: 'Royal traditional',
-          notes: 'Lakefront ceremony and royal banquet',
-        })
+      const res = await request(app).post('/api/plans').set('Cookie', guestCookie).send({
+        type: 'wedding',
+        title: 'Aria & Rohan Nuptials',
+        date: '2027-02-14',
+        guests: 200,
+        budget: 2500000,
+        currency: 'INR',
+        city: 'Udaipur',
+        vibe: 'Royal traditional',
+        notes: 'Lakefront ceremony and royal banquet',
+      })
 
       expect(res.status).toBe(201)
       const plan = res.body.plan
@@ -135,7 +134,7 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       expect(plan.ideas.length).toBeGreaterThanOrEqual(3)
 
       // Verify budget totals
-      const totalAllocated = plan.budget.reduce((s: number, b: any) => s + b.allocated, 0)
+      const totalAllocated = plan.budget.reduce((s: number, b: BudgetItem) => s + b.allocated, 0)
       expect(totalAllocated).toBe(2500000)
 
       createdPlanId = plan.id
@@ -144,9 +143,7 @@ describe('Soirée Fullstack Backend Test Suite', () => {
     })
 
     it('retrieves the plan list for the user', async () => {
-      const res = await request(app)
-        .get('/api/plans')
-        .set('Cookie', guestCookie)
+      const res = await request(app).get('/api/plans').set('Cookie', guestCookie)
 
       expect(res.status).toBe(200)
       expect(res.body.plans.length).toBe(1)
@@ -154,9 +151,7 @@ describe('Soirée Fullstack Backend Test Suite', () => {
     })
 
     it('retrieves full plan details by ID', async () => {
-      const res = await request(app)
-        .get(`/api/plans/${createdPlanId}`)
-        .set('Cookie', guestCookie)
+      const res = await request(app).get(`/api/plans/${createdPlanId}`).set('Cookie', guestCookie)
 
       expect(res.status).toBe(200)
       expect(res.body.plan.id).toBe(createdPlanId)
@@ -173,10 +168,8 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       expect(res.body.done).toBe(true)
 
       // Confirm persistence in DB
-      const getRes = await request(app)
-        .get(`/api/plans/${createdPlanId}`)
-        .set('Cookie', guestCookie)
-      const m = getRes.body.plan.timeline.find((x: any) => x.id === milestoneId)
+      const getRes = await request(app).get(`/api/plans/${createdPlanId}`).set('Cookie', guestCookie)
+      const m = getRes.body.plan.timeline.find((x: Milestone) => x.id === milestoneId)
       expect(m.done).toBe(true)
     })
 
@@ -202,9 +195,7 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       expect(res.body.reply.role).toBe('assistant')
 
       // Check chat history retrieval
-      const chatRes = await request(app)
-        .get(`/api/plans/${createdPlanId}/chat`)
-        .set('Cookie', guestCookie)
+      const chatRes = await request(app).get(`/api/plans/${createdPlanId}/chat`).set('Cookie', guestCookie)
 
       expect(chatRes.status).toBe(200)
       expect(chatRes.body.messages.length).toBe(2)
@@ -213,9 +204,7 @@ describe('Soirée Fullstack Backend Test Suite', () => {
     })
 
     it('exports RFC 5545 calendar (.ics)', async () => {
-      const res = await request(app)
-        .get(`/api/plans/${createdPlanId}/export.ics`)
-        .set('Cookie', guestCookie)
+      const res = await request(app).get(`/api/plans/${createdPlanId}/export.ics`).set('Cookie', guestCookie)
 
       expect(res.status).toBe(200)
       expect(res.headers['content-type']).toContain('text/calendar')
@@ -244,37 +233,30 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       userBCookie = resB.headers['set-cookie'][0]
 
       // User A creates a plan
-      const planRes = await request(app)
-        .post('/api/plans')
-        .set('Cookie', userACookie)
-        .send({
-          type: 'birthday',
-          title: "Secret 30th Birthday for User A",
-          date: '2027-05-20',
-          guests: 50,
-          budget: 150000,
-          currency: 'INR',
-          city: 'Mumbai',
-          vibe: 'Retro party',
-          notes: 'Top secret surprise',
-        })
+      const planRes = await request(app).post('/api/plans').set('Cookie', userACookie).send({
+        type: 'birthday',
+        title: 'Secret 30th Birthday for User A',
+        date: '2027-05-20',
+        guests: 50,
+        budget: 150000,
+        currency: 'INR',
+        city: 'Mumbai',
+        vibe: 'Retro party',
+        notes: 'Top secret surprise',
+      })
       planAId = planRes.body.plan.id
     })
 
     it("User B CANNOT read User A's plan list", async () => {
-      const res = await request(app)
-        .get('/api/plans')
-        .set('Cookie', userBCookie)
+      const res = await request(app).get('/api/plans').set('Cookie', userBCookie)
 
       expect(res.status).toBe(200)
-      const found = res.body.plans.find((p: any) => p.id === planAId)
+      const found = res.body.plans.find((p: { id: string }) => p.id === planAId)
       expect(found).toBeUndefined()
     })
 
     it("User B CANNOT fetch User A's plan details (404/Isolated)", async () => {
-      const res = await request(app)
-        .get(`/api/plans/${planAId}`)
-        .set('Cookie', userBCookie)
+      const res = await request(app).get(`/api/plans/${planAId}`).set('Cookie', userBCookie)
 
       expect(res.status).toBe(404)
       expect(res.body.error).toContain('not found')
@@ -290,24 +272,18 @@ describe('Soirée Fullstack Backend Test Suite', () => {
     })
 
     it("User B CANNOT delete User A's plan", async () => {
-      const res = await request(app)
-        .delete(`/api/plans/${planAId}`)
-        .set('Cookie', userBCookie)
+      const res = await request(app).delete(`/api/plans/${planAId}`).set('Cookie', userBCookie)
 
       expect(res.status).toBe(404)
     })
 
-    it("User A CAN delete their own plan, cascading to all sub-tables", async () => {
-      const res = await request(app)
-        .delete(`/api/plans/${planAId}`)
-        .set('Cookie', userACookie)
+    it('User A CAN delete their own plan, cascading to all sub-tables', async () => {
+      const res = await request(app).delete(`/api/plans/${planAId}`).set('Cookie', userACookie)
 
       expect(res.status).toBe(200)
 
       // Confirm plan is deleted
-      const checkRes = await request(app)
-        .get(`/api/plans/${planAId}`)
-        .set('Cookie', userACookie)
+      const checkRes = await request(app).get(`/api/plans/${planAId}`).set('Cookie', userACookie)
       expect(checkRes.status).toBe(404)
     })
   })
@@ -322,20 +298,17 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       const userRes = await request(app).post('/api/auth/guest')
       userCookie = userRes.headers['set-cookie'][0]
 
-      const planRes = await request(app)
-        .post('/api/plans')
-        .set('Cookie', userCookie)
-        .send({
-          type: 'wedding',
-          title: 'Royal Udaipur Nuptials',
-          date: '2027-11-20',
-          guests: 200,
-          budget: 5000000,
-          currency: 'INR',
-          city: 'Udaipur',
-          vibe: 'Royal Heritage Velvet & Gilded Gold',
-          notes: 'Lakeside palace ceremony',
-        })
+      const planRes = await request(app).post('/api/plans').set('Cookie', userCookie).send({
+        type: 'wedding',
+        title: 'Royal Udaipur Nuptials',
+        date: '2027-11-20',
+        guests: 200,
+        budget: 5000000,
+        currency: 'INR',
+        city: 'Udaipur',
+        vibe: 'Royal Heritage Velvet & Gilded Gold',
+        notes: 'Lakeside palace ceremony',
+      })
       testPlanId = planRes.body.plan.id
 
       // Create user 2
@@ -354,9 +327,7 @@ describe('Soirée Fullstack Backend Test Suite', () => {
     })
 
     it('returns 404 when fetching moodboard before it is generated', async () => {
-      const res = await request(app)
-        .get(`/api/plans/${testPlanId}/moodboard`)
-        .set('Cookie', userCookie)
+      const res = await request(app).get(`/api/plans/${testPlanId}/moodboard`).set('Cookie', userCookie)
       expect(res.status).toBe(404)
     })
 
@@ -401,9 +372,7 @@ describe('Soirée Fullstack Backend Test Suite', () => {
     })
 
     it('retrieves the saved moodboard via GET /api/plans/:id/moodboard', async () => {
-      const res = await request(app)
-        .get(`/api/plans/${testPlanId}/moodboard`)
-        .set('Cookie', userCookie)
+      const res = await request(app).get(`/api/plans/${testPlanId}/moodboard`).set('Cookie', userCookie)
 
       expect(res.status).toBe(200)
       expect(res.body.moodboard).toBeDefined()
@@ -411,9 +380,7 @@ describe('Soirée Fullstack Backend Test Suite', () => {
     })
 
     it('enforces ownership check: User B cannot retrieve User A moodboard (404)', async () => {
-      const res = await request(app)
-        .get(`/api/plans/${testPlanId}/moodboard`)
-        .set('Cookie', otherCookie)
+      const res = await request(app).get(`/api/plans/${testPlanId}/moodboard`).set('Cookie', otherCookie)
 
       expect(res.status).toBe(404)
     })
@@ -429,27 +396,21 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       const ownerRes = await request(app).post('/api/auth/guest')
       ownerCookie = ownerRes.headers['set-cookie'][0]
 
-      const planRes = await request(app)
-        .post('/api/plans')
-        .set('Cookie', ownerCookie)
-        .send({
-          type: 'birthday',
-          title: 'Ayaan 30th Golden Milestone',
-          date: '2027-09-15',
-          guests: 75,
-          budget: 1500000,
-          currency: 'INR',
-          city: 'Mumbai',
-          vibe: 'Modern Black Tie & Rose Gold',
-          notes: 'Rooftop celebration with live jazz and private chef',
-        })
+      const planRes = await request(app).post('/api/plans').set('Cookie', ownerCookie).send({
+        type: 'birthday',
+        title: 'Ayaan 30th Golden Milestone',
+        date: '2027-09-15',
+        guests: 75,
+        budget: 1500000,
+        currency: 'INR',
+        city: 'Mumbai',
+        vibe: 'Modern Black Tie & Rose Gold',
+        notes: 'Rooftop celebration with live jazz and private chef',
+      })
       planId = planRes.body.plan.id
 
       // Also generate moodboard for this plan so we can test public moodboard visibility
-      await request(app)
-        .post(`/api/plans/${planId}/moodboard`)
-        .set('Cookie', ownerCookie)
-        .send({})
+      await request(app).post(`/api/plans/${planId}/moodboard`).set('Cookie', ownerCookie).send({})
 
       const otherRes = await request(app).post('/api/auth/guest')
       otherCookie = otherRes.headers['set-cookie'][0]
@@ -466,16 +427,12 @@ describe('Soirée Fullstack Backend Test Suite', () => {
     })
 
     it('enforces ownership check: User B cannot enable share for User A plan (404)', async () => {
-      const res = await request(app)
-        .post(`/api/plans/${planId}/share`)
-        .set('Cookie', otherCookie)
+      const res = await request(app).post(`/api/plans/${planId}/share`).set('Cookie', otherCookie)
       expect(res.status).toBe(404)
     })
 
     it('enforces ownership check: User B cannot revoke share for User A plan (404)', async () => {
-      const res = await request(app)
-        .delete(`/api/plans/${planId}/share`)
-        .set('Cookie', otherCookie)
+      const res = await request(app).delete(`/api/plans/${planId}/share`).set('Cookie', otherCookie)
       expect(res.status).toBe(404)
     })
 
@@ -486,9 +443,7 @@ describe('Soirée Fullstack Backend Test Suite', () => {
     })
 
     it('enables share and returns a 24-char URL-safe token', async () => {
-      const res = await request(app)
-        .post(`/api/plans/${planId}/share`)
-        .set('Cookie', ownerCookie)
+      const res = await request(app).post(`/api/plans/${planId}/share`).set('Cookie', ownerCookie)
 
       expect(res.status).toBe(200)
       expect(res.body.shareEnabled).toBe(true)
@@ -515,27 +470,27 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       expect(p.moodboard.palette).toHaveLength(5)
 
       // Strict sanitization checks
-      expect((p as any).budget).toBeUndefined()
-      expect((p as any).spent).toBeUndefined()
-      expect((p as any).notes).toBeUndefined()
-      expect((p as any).chat).toBeUndefined()
-      expect((p as any).email).toBeUndefined()
-      expect((p as any).userId).toBeUndefined()
-      expect((p as any).user_id).toBeUndefined()
+      const untypedPlan = p as Record<string, unknown>
+      expect(untypedPlan.budget).toBeUndefined()
+      expect(untypedPlan.spent).toBeUndefined()
+      expect(untypedPlan.notes).toBeUndefined()
+      expect(untypedPlan.chat).toBeUndefined()
+      expect(untypedPlan.email).toBeUndefined()
+      expect(untypedPlan.userId).toBeUndefined()
+      expect(untypedPlan.user_id).toBeUndefined()
 
       // Vendor sanitization: check that vendors have NO estimate or tips
       for (const v of p.vendors) {
         expect(v.category).toBeTruthy()
         expect(v.status).toBeTruthy()
-        expect((v as any).estimate).toBeUndefined()
-        expect((v as any).tips).toBeUndefined()
+        const untypedV = v as unknown as Record<string, unknown>
+        expect(untypedV.estimate).toBeUndefined()
+        expect(untypedV.tips).toBeUndefined()
       }
     })
 
     it('revokes share link and returns 404 for subsequent public requests', async () => {
-      const revokeRes = await request(app)
-        .delete(`/api/plans/${planId}/share`)
-        .set('Cookie', ownerCookie)
+      const revokeRes = await request(app).delete(`/api/plans/${planId}/share`).set('Cookie', ownerCookie)
 
       expect(revokeRes.status).toBe(200)
       expect(revokeRes.body.shareEnabled).toBe(false)
@@ -557,19 +512,16 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       const ownerRes = await request(app).post('/api/auth/guest')
       ownerCookie = ownerRes.headers['set-cookie'][0]
 
-      const planRes = await request(app)
-        .post('/api/plans')
-        .set('Cookie', ownerCookie)
-        .send({
-          type: 'wedding',
-          title: 'Kabir & Rhea Royal Rajputana',
-          date: '2027-11-20',
-          guests: 150,
-          budget: 5000000,
-          currency: 'INR',
-          city: 'Udaipur',
-          vibe: 'Royal, Regal, Intimate',
-        })
+      const planRes = await request(app).post('/api/plans').set('Cookie', ownerCookie).send({
+        type: 'wedding',
+        title: 'Kabir & Rhea Royal Rajputana',
+        date: '2027-11-20',
+        guests: 150,
+        budget: 5000000,
+        currency: 'INR',
+        city: 'Udaipur',
+        vibe: 'Royal, Regal, Intimate',
+      })
       planId = planRes.body.plan.id
 
       const otherRes = await request(app).post('/api/auth/guest')
@@ -580,9 +532,7 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       const getRes = await request(app).get(`/api/plans/${planId}/guests`)
       expect(getRes.status).toBe(401)
 
-      const postRes = await request(app)
-        .post(`/api/plans/${planId}/guests`)
-        .send({ name: 'Ananya Sharma' })
+      const postRes = await request(app).post(`/api/plans/${planId}/guests`).send({ name: 'Ananya Sharma' })
       expect(postRes.status).toBe(401)
 
       const summaryRes = await request(app).get(`/api/plans/${planId}/guests/summary`)
@@ -590,9 +540,7 @@ describe('Soirée Fullstack Backend Test Suite', () => {
     })
 
     it('enforces ownership checks (404 for other user)', async () => {
-      const getRes = await request(app)
-        .get(`/api/plans/${planId}/guests`)
-        .set('Cookie', otherCookie)
+      const getRes = await request(app).get(`/api/plans/${planId}/guests`).set('Cookie', otherCookie)
       expect(getRes.status).toBe(404)
 
       const postRes = await request(app)
@@ -629,16 +577,13 @@ describe('Soirée Fullstack Backend Test Suite', () => {
     })
 
     it('adds a new guest via POST /api/plans/:id/guests', async () => {
-      const res = await request(app)
-        .post(`/api/plans/${planId}/guests`)
-        .set('Cookie', ownerCookie)
-        .send({
-          name: 'Vikram & Sunita Malhotra',
-          party: 2,
-          status: 'pending',
-          dietary: 'veg',
-          notes: 'VIP Family Table',
-        })
+      const res = await request(app).post(`/api/plans/${planId}/guests`).set('Cookie', ownerCookie).send({
+        name: 'Vikram & Sunita Malhotra',
+        party: 2,
+        status: 'pending',
+        dietary: 'veg',
+        notes: 'VIP Family Table',
+      })
 
       expect(res.status).toBe(201)
       expect(res.body.guest).toBeDefined()
@@ -652,14 +597,12 @@ describe('Soirée Fullstack Backend Test Suite', () => {
     })
 
     it('lists guests via GET /api/plans/:id/guests', async () => {
-      const res = await request(app)
-        .get(`/api/plans/${planId}/guests`)
-        .set('Cookie', ownerCookie)
+      const res = await request(app).get(`/api/plans/${planId}/guests`).set('Cookie', ownerCookie)
 
       expect(res.status).toBe(200)
       expect(Array.isArray(res.body.guests)).toBe(true)
       expect(res.body.guests.length).toBeGreaterThanOrEqual(1)
-      expect(res.body.guests.some((g: any) => g.id === createdGuestId)).toBe(true)
+      expect(res.body.guests.some((g: Guest) => g.id === createdGuestId)).toBe(true)
     })
 
     it('updates guest details via PATCH /api/plans/:id/guests/:guestId', async () => {
@@ -694,7 +637,7 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       expect(res.status).toBe(201)
       expect(res.body.count).toBe(3)
       expect(res.body.guests).toHaveLength(3)
-      expect(res.body.guests.map((g: any) => g.name)).toContain('Aarav Mehta')
+      expect(res.body.guests.map((g: Guest) => g.name)).toContain('Aarav Mehta')
     })
 
     it('rejects bulk paste when exceeding 500 lines (400)', async () => {
@@ -709,9 +652,7 @@ describe('Soirée Fullstack Backend Test Suite', () => {
     })
 
     it('calculates summary, headcount and cost-per-head via GET /api/plans/:id/guests/summary', async () => {
-      const res = await request(app)
-        .get(`/api/plans/${planId}/guests/summary`)
-        .set('Cookie', ownerCookie)
+      const res = await request(app).get(`/api/plans/${planId}/guests/summary`).set('Cookie', ownerCookie)
 
       expect(res.status).toBe(200)
       expect(res.body.summary).toBeDefined()
@@ -735,11 +676,9 @@ describe('Soirée Fullstack Backend Test Suite', () => {
 
       expect(delRes.status).toBe(200)
 
-      const listRes = await request(app)
-        .get(`/api/plans/${planId}/guests`)
-        .set('Cookie', ownerCookie)
+      const listRes = await request(app).get(`/api/plans/${planId}/guests`).set('Cookie', ownerCookie)
 
-      expect(listRes.body.guests.some((g: any) => g.id === createdGuestId)).toBe(false)
+      expect(listRes.body.guests.some((g: Guest) => g.id === createdGuestId)).toBe(false)
     })
   })
 
@@ -756,26 +695,23 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       ownerCookie = ownerRes.headers['set-cookie'][0]
 
       budgetTotal = 2000000
-      const planRes = await request(app)
-        .post('/api/plans')
-        .set('Cookie', ownerCookie)
-        .send({
-          type: 'wedding',
-          title: 'Diya & Neil Heritage Palace Soirée',
-          date: '2027-12-10',
-          guests: 100,
-          budget: budgetTotal,
-          currency: 'INR',
-          city: 'Jaipur',
-          vibe: 'Heritage, Floral, Pastel',
-        })
+      const planRes = await request(app).post('/api/plans').set('Cookie', ownerCookie).send({
+        type: 'wedding',
+        title: 'Diya & Neil Heritage Palace Soirée',
+        date: '2027-12-10',
+        guests: 100,
+        budget: budgetTotal,
+        currency: 'INR',
+        city: 'Jaipur',
+        vibe: 'Heritage, Floral, Pastel',
+      })
 
       const plan = planRes.body.plan
       planId = plan.id
 
       // Find an item to artificially overspend and find contingency
-      const decorItem = plan.budget.find((b: any) => !b.category.toLowerCase().includes('contingency'))
-      const contItem = plan.budget.find((b: any) => b.category.toLowerCase().includes('contingency'))
+      const decorItem = plan.budget.find((b: BudgetItem) => !b.category.toLowerCase().includes('contingency'))
+      const contItem = plan.budget.find((b: BudgetItem) => b.category.toLowerCase().includes('contingency'))
 
       overspentItemId = decorItem.id
       contingencyItemId = contItem.id
@@ -796,44 +732,34 @@ describe('Soirée Fullstack Backend Test Suite', () => {
     })
 
     it('enforces ownership checks (404 for other user)', async () => {
-      const res = await request(app)
-        .post(`/api/plans/${planId}/budget/rebalance`)
-        .set('Cookie', otherCookie)
+      const res = await request(app).post(`/api/plans/${planId}/budget/rebalance`).set('Cookie', otherCookie)
       expect(res.status).toBe(404)
     })
 
     it('returns a proposal without writing to the database', async () => {
-      const planBefore = await request(app)
-        .get(`/api/plans/${planId}`)
-        .set('Cookie', ownerCookie)
+      const planBefore = await request(app).get(`/api/plans/${planId}`).set('Cookie', ownerCookie)
 
-      const res = await request(app)
-        .post(`/api/plans/${planId}/budget/rebalance`)
-        .set('Cookie', ownerCookie)
+      const res = await request(app).post(`/api/plans/${planId}/budget/rebalance`).set('Cookie', ownerCookie)
 
       expect(res.status).toBe(200)
       expect(res.body.proposal).toBeDefined()
       expect(Array.isArray(res.body.proposal.changes)).toBe(true)
 
       // Verify NO write occurred on GET
-      const planAfter = await request(app)
-        .get(`/api/plans/${planId}`)
-        .set('Cookie', ownerCookie)
+      const planAfter = await request(app).get(`/api/plans/${planId}`).set('Cookie', ownerCookie)
 
       expect(planAfter.body.plan.budget).toEqual(planBefore.body.plan.budget)
     })
 
     it('satisfies all rebalancing rules: total equals budget, to >= spent, contingency untouched', async () => {
-      const res = await request(app)
-        .post(`/api/plans/${planId}/budget/rebalance`)
-        .set('Cookie', ownerCookie)
+      const res = await request(app).post(`/api/plans/${planId}/budget/rebalance`).set('Cookie', ownerCookie)
 
       expect(res.status).toBe(200)
       const proposal = res.body.proposal
       const changes = proposal.changes
 
       // Rule 1: The total of all proposed 'to' amounts must equal the plan budget
-      const sumProposed = changes.reduce((s: number, c: any) => s + c.to, 0)
+      const sumProposed = changes.reduce((s: number, c: { to: number }) => s + c.to, 0)
       expect(sumProposed).toBe(budgetTotal)
 
       // Rule 2: No category goes below what has already been spent
@@ -843,25 +769,23 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       }
 
       // Check the specifically overspent category
-      const overspentChange = changes.find((c: any) => c.itemId === overspentItemId)
+      const overspentChange = changes.find((c: { itemId: string }) => c.itemId === overspentItemId)
       expect(overspentChange).toBeDefined()
       expect(overspentChange.to).toBeGreaterThanOrEqual(overspentChange.from + 100000)
 
       // Rule 3: The contingency row stays strictly untouched
-      const contChange = changes.find((c: any) => c.itemId === contingencyItemId)
+      const contChange = changes.find((c: { itemId: string }) => c.itemId === contingencyItemId)
       expect(contChange).toBeDefined()
       expect(contChange.to).toBe(contChange.from)
       expect(contChange.reason).toContain('untouched')
     })
 
     it('applies the proposed changes atomically via POST /api/plans/:id/budget/apply', async () => {
-      const rebRes = await request(app)
-        .post(`/api/plans/${planId}/budget/rebalance`)
-        .set('Cookie', ownerCookie)
+      const rebRes = await request(app).post(`/api/plans/${planId}/budget/rebalance`).set('Cookie', ownerCookie)
 
       const proposal = rebRes.body.proposal
       const payload = {
-        changes: proposal.changes.map((c: any) => ({ itemId: c.itemId, to: c.to })),
+        changes: proposal.changes.map((c: { itemId: string; to: number }) => ({ itemId: c.itemId, to: c.to })),
       }
 
       const applyRes = await request(app)
@@ -873,14 +797,12 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       expect(Array.isArray(applyRes.body.budget)).toBe(true)
 
       // Verify the updated plan reflects new allocations
-      const updatedPlan = await request(app)
-        .get(`/api/plans/${planId}`)
-        .set('Cookie', ownerCookie)
+      const updatedPlan = await request(app).get(`/api/plans/${planId}`).set('Cookie', ownerCookie)
 
-      const newSumAllocated = updatedPlan.body.plan.budget.reduce((s: number, b: any) => s + b.allocated, 0)
+      const newSumAllocated = updatedPlan.body.plan.budget.reduce((s: number, b: BudgetItem) => s + b.allocated, 0)
       expect(newSumAllocated).toBe(budgetTotal)
 
-      const updatedOverspent = updatedPlan.body.plan.budget.find((b: any) => b.id === overspentItemId)
+      const updatedOverspent = updatedPlan.body.plan.budget.find((b: BudgetItem) => b.id === overspentItemId)
       expect(updatedOverspent.allocated).toBeGreaterThanOrEqual(updatedOverspent.spent)
     })
   })
@@ -893,18 +815,15 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       const res = await request(app).post('/api/auth/guest')
       authCookie = res.headers['set-cookie'][0]
 
-      const planRes = await request(app)
-        .post('/api/plans')
-        .set('Cookie', authCookie)
-        .send({
-          type: 'birthday',
-          title: 'Performance Benchmark Soiree',
-          date: '2027-08-15',
-          guests: 50,
-          budget: 200000,
-          currency: 'INR',
-          city: 'Mumbai',
-        })
+      const planRes = await request(app).post('/api/plans').set('Cookie', authCookie).send({
+        type: 'birthday',
+        title: 'Performance Benchmark Soiree',
+        date: '2027-08-15',
+        guests: 50,
+        budget: 200000,
+        currency: 'INR',
+        city: 'Mumbai',
+      })
       planId = planRes.body.plan.id
     })
 
@@ -915,9 +834,7 @@ describe('Soirée Fullstack Backend Test Suite', () => {
     })
 
     it('paginates GET /api/plans with limit, offset and total', async () => {
-      const res = await request(app)
-        .get('/api/plans?limit=1&offset=0')
-        .set('Cookie', authCookie)
+      const res = await request(app).get('/api/plans?limit=1&offset=0').set('Cookie', authCookie)
 
       expect(res.status).toBe(200)
       expect(Array.isArray(res.body.plans)).toBe(true)
@@ -928,9 +845,7 @@ describe('Soirée Fullstack Backend Test Suite', () => {
     })
 
     it('paginates GET /api/plans/:id/vendors and supports limit/offset', async () => {
-      const res = await request(app)
-        .get(`/api/plans/${planId}/vendors?limit=2&offset=0`)
-        .set('Cookie', authCookie)
+      const res = await request(app).get(`/api/plans/${planId}/vendors?limit=2&offset=0`).set('Cookie', authCookie)
 
       expect(res.status).toBe(200)
       expect(Array.isArray(res.body.vendors)).toBe(true)
@@ -941,18 +856,14 @@ describe('Soirée Fullstack Backend Test Suite', () => {
     })
 
     it('paginates GET /api/plans/:id/guests and GET /api/plans/:id/chat', async () => {
-      const guestRes = await request(app)
-        .get(`/api/plans/${planId}/guests?limit=5&offset=0`)
-        .set('Cookie', authCookie)
+      const guestRes = await request(app).get(`/api/plans/${planId}/guests?limit=5&offset=0`).set('Cookie', authCookie)
 
       expect(guestRes.status).toBe(200)
       expect(Array.isArray(guestRes.body.guests)).toBe(true)
       expect(guestRes.body.limit).toBe(5)
       expect(guestRes.body.offset).toBe(0)
 
-      const chatRes = await request(app)
-        .get(`/api/plans/${planId}/chat?limit=5&offset=0`)
-        .set('Cookie', authCookie)
+      const chatRes = await request(app).get(`/api/plans/${planId}/chat?limit=5&offset=0`).set('Cookie', authCookie)
 
       expect(chatRes.status).toBe(200)
       expect(Array.isArray(chatRes.body.messages)).toBe(true)
@@ -971,70 +882,56 @@ describe('Soirée Fullstack Backend Test Suite', () => {
         .send({ email: 'secb2@soiree.com', password: 'password123' })
       authCookie = reg.headers['set-cookie'][0]
 
-      const planRes = await request(app)
-        .post('/api/plans')
-        .set('Cookie', authCookie)
-        .send({
-          type: 'wedding',
-          title: 'Royal Palace Celebration',
-          date: '2027-04-10',
-          guests: 150,
-          budget: 5000000,
-          currency: 'INR',
-          city: 'Jaipur',
-        })
+      const planRes = await request(app).post('/api/plans').set('Cookie', authCookie).send({
+        type: 'wedding',
+        title: 'Royal Palace Celebration',
+        date: '2027-04-10',
+        guests: 150,
+        budget: 5000000,
+        currency: 'INR',
+        city: 'Jaipur',
+      })
       testPlanId = planRes.body.plan.id
     })
 
     describe('Strict Zod Validation (rejects unexpected keys, invalid params, invalid queries)', () => {
       it('rejects unexpected body keys on brief creation with 400', async () => {
-        const res = await request(app)
-          .post('/api/plans')
-          .set('Cookie', authCookie)
-          .send({
-            type: 'wedding',
-            date: '2027-04-10',
-            guests: 100,
-            budget: 1000000,
-            unexpectedField: 'malicious-data',
-          })
+        const res = await request(app).post('/api/plans').set('Cookie', authCookie).send({
+          type: 'wedding',
+          date: '2027-04-10',
+          guests: 100,
+          budget: 1000000,
+          unexpectedField: 'malicious-data',
+        })
 
         expect(res.status).toBe(400)
         expect(res.body.error).toBe('Validation failed')
       })
 
       it('rejects unexpected body keys on register and login with 400', async () => {
-        const regRes = await request(app)
-          .post('/api/auth/register')
-          .send({
-            email: 'hacker@soiree.com',
-            password: 'password123',
-            isAdmin: true,
-          })
+        const regRes = await request(app).post('/api/auth/register').send({
+          email: 'hacker@soiree.com',
+          password: 'password123',
+          isAdmin: true,
+        })
         expect(regRes.status).toBe(400)
 
-        const loginRes = await request(app)
-          .post('/api/auth/login')
-          .send({
-            email: 'hacker@soiree.com',
-            password: 'password123',
-            role: 'superuser',
-          })
+        const loginRes = await request(app).post('/api/auth/login').send({
+          email: 'hacker@soiree.com',
+          password: 'password123',
+          role: 'superuser',
+        })
         expect(loginRes.status).toBe(400)
       })
 
       it('rejects invalid pagination queries with 400', async () => {
-        const res = await request(app)
-          .get('/api/plans?limit=not-a-number')
-          .set('Cookie', authCookie)
+        const res = await request(app).get('/api/plans?limit=not-a-number').set('Cookie', authCookie)
 
         expect(res.status).toBe(400)
       })
 
       it('rejects unexpected query parameters on pagination with 400', async () => {
-        const res = await request(app)
-          .get('/api/plans?limit=10&injectedQuery=xyz')
-          .set('Cookie', authCookie)
+        const res = await request(app).get('/api/plans?limit=10&injectedQuery=xyz').set('Cookie', authCookie)
 
         expect(res.status).toBe(400)
       })
@@ -1067,7 +964,8 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       })
 
       it('folds long ICS lines to maximum 75 octets with space continuation', () => {
-        const longLine = 'DESCRIPTION:This is an exceptionally detailed and magnificent description that spans well beyond the standard seventy-five character limit required by the iCalendar RFC specification.'
+        const longLine =
+          'DESCRIPTION:This is an exceptionally detailed and magnificent description that spans well beyond the standard seventy-five character limit required by the iCalendar RFC specification.'
         const folded = foldICSLine(longLine)
         const lines = folded.split('\r\n')
         expect(lines.length).toBeGreaterThan(1)
@@ -1078,7 +976,8 @@ describe('Soirée Fullstack Backend Test Suite', () => {
 
     describe('HTML Sanitisation', () => {
       it('neutralizes malicious HTML script and iframe tags in user input', () => {
-        const malicious = '<script>alert("XSS")</script><p>Welcome to our <b>gala</b></p><iframe src="evil.com"></iframe>'
+        const malicious =
+          '<script>alert("XSS")</script><p>Welcome to our <b>gala</b></p><iframe src="evil.com"></iframe>'
         const sanitized = sanitizeText(malicious)
         expect(sanitized).not.toContain('<script>')
         expect(sanitized).not.toContain('alert')
@@ -1094,18 +993,15 @@ describe('Soirée Fullstack Backend Test Suite', () => {
       })
 
       it('sanitizes user input saved in plan creation and guest tracker', async () => {
-        const planRes = await request(app)
-          .post('/api/plans')
-          .set('Cookie', authCookie)
-          .send({
-            type: 'community',
-            title: '<script>alert("hack")</script>Neighborhood Feast',
-            date: '2027-05-01',
-            guests: 40,
-            budget: 100000,
-            currency: 'INR',
-            notes: '<img src="x" onerror="steal()">Bring blankets',
-          })
+        const planRes = await request(app).post('/api/plans').set('Cookie', authCookie).send({
+          type: 'community',
+          title: '<script>alert("hack")</script>Neighborhood Feast',
+          date: '2027-05-01',
+          guests: 40,
+          budget: 100000,
+          currency: 'INR',
+          notes: '<img src="x" onerror="steal()">Bring blankets',
+        })
 
         expect(planRes.status).toBe(201)
         expect(planRes.body.plan.brief.title).toBe('Neighborhood Feast')
@@ -1127,6 +1023,3 @@ describe('Soirée Fullstack Backend Test Suite', () => {
     })
   })
 })
-
-
-

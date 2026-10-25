@@ -1,4 +1,12 @@
-import type { Brief, BudgetItem, BudgetRebalanceProposal, ChatMessage, IdeaGroup, Moodboard, Plan } from '@soiree/shared'
+import type {
+  Brief,
+  BudgetItem,
+  BudgetRebalanceProposal,
+  ChatMessage,
+  IdeaGroup,
+  Moodboard,
+  Plan,
+} from '@soiree/shared'
 import {
   buildBudget,
   buildTimeline,
@@ -43,8 +51,17 @@ async function callGemini(prompt: string, json: boolean, system?: string): Promi
     },
   )
   if (!res.ok) throw new Error(`Gemini HTTP error ${res.status}: ${res.statusText}`)
-  const data = (await res.json()) as any
-  const text: string | undefined = data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('')
+  interface GeminiApiResponse {
+    candidates?: Array<{
+      content?: {
+        parts?: Array<{ text?: string }>
+      }
+    }>
+  }
+  const data = (await res.json()) as GeminiApiResponse
+  const text: string | undefined = data?.candidates?.[0]?.content?.parts
+    ?.map((p: { text?: string }) => p.text ?? '')
+    .join('')
   if (!text) throw new Error('Empty response from Gemini')
   return text
 }
@@ -70,7 +87,10 @@ interface AiPlanJson {
 }
 
 function parseJson<T>(text: string): T {
-  const cleaned = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
+  const cleaned = text
+    .replace(/^```(?:json)?/i, '')
+    .replace(/```$/, '')
+    .trim()
   return JSON.parse(cleaned) as T
 }
 
@@ -96,11 +116,17 @@ export async function generatePlan(brief: Brief): Promise<Plan> {
 
     const budget = buildBudget(
       brief,
-      normalizePercents(j.budget.map((b) => ({ category: String(b.category), percent: Number(b.percent) || 0, note: b.note ?? '' }))),
+      normalizePercents(
+        j.budget.map((b) => ({ category: String(b.category), percent: Number(b.percent) || 0, note: b.note ?? '' })),
+      ),
     )
     const timeline = buildTimeline(
       brief,
-      j.timeline.map((t) => ({ label: String(t.label), detail: t.detail ?? '', weeksBefore: Number(t.weeksBefore) || 0 })),
+      j.timeline.map((t) => ({
+        label: String(t.label),
+        detail: t.detail ?? '',
+        weeksBefore: Number(t.weeksBefore) || 0,
+      })),
     )
     const vendors = buildVendors(
       brief,
@@ -152,15 +178,25 @@ function planContext(plan: Plan): string {
     briefLine(b) +
     `\nSpent so far: ${money(spent, b.currency)}.` +
     `\nBudget: ${plan.budget.map((x) => `${x.category} ${money(x.allocated, b.currency)} (spent ${money(x.spent, b.currency)})`).join('; ')}.` +
-    `\nPending milestones: ${plan.timeline.filter((t) => !t.done).map((t) => `${t.label} (${t.weeksBefore}w before)`).join('; ')}.` +
+    `\nPending milestones: ${plan.timeline
+      .filter((t) => !t.done)
+      .map((t) => `${t.label} (${t.weeksBefore}w before)`)
+      .join('; ')}.` +
     `\nVendors: ${plan.vendors.map((v) => `${v.category}: ${v.status}`).join('; ')}.`
   )
 }
 
-export async function askAssistant(plan: Plan, history: ChatMessage[], question: string): Promise<{ text: string; ai: boolean }> {
+export async function askAssistant(
+  plan: Plan,
+  history: ChatMessage[],
+  question: string,
+): Promise<{ text: string; ai: boolean }> {
   if (getApiKey()) {
     try {
-      const convo = history.slice(-6).map((m) => `${m.role === 'user' ? 'User' : 'Soirée'}: ${m.text}`).join('\n')
+      const convo = history
+        .slice(-6)
+        .map((m) => `${m.role === 'user' ? 'User' : 'Soirée'}: ${m.text}`)
+        .join('\n')
       const text = await callGemini(
         `Current plan context:\n${planContext(plan)}\n\nConversation so far:\n${convo}\n\nUser: ${question}\n\nAnswer concisely (max ~120 words) with concrete, actionable suggestions.`,
         false,
@@ -203,14 +239,37 @@ CRITICAL: "palette" MUST contain exactly 5 colors, and every "hex" MUST be a 6-d
 `
 
     const raw = await callGemini(prompt, true, SYSTEM)
-    const parsed = JSON.parse(raw)
+    interface RawMoodboardColor {
+      name?: unknown
+      role?: unknown
+      hex?: unknown
+    }
+    interface RawMoodboardResponse {
+      palette?: RawMoodboardColor[]
+      typography?: {
+        heading?: unknown
+        body?: unknown
+        vibe?: unknown
+      }
+      motifs?: unknown[]
+      decor?: unknown[]
+      outfitNotes?: unknown[]
+      playlistVibes?: unknown[]
+    }
+    const parsed = JSON.parse(raw) as RawMoodboardResponse
 
     const hexRegex = /^#[0-9a-f]{6}$/i
     if (
       !parsed ||
       !Array.isArray(parsed.palette) ||
       parsed.palette.length !== 5 ||
-      !parsed.palette.every((c: any) => typeof c.name === 'string' && typeof c.role === 'string' && typeof c.hex === 'string' && hexRegex.test(c.hex)) ||
+      !parsed.palette.every(
+        (c) =>
+          typeof c?.name === 'string' &&
+          typeof c?.role === 'string' &&
+          typeof c?.hex === 'string' &&
+          hexRegex.test(c.hex),
+      ) ||
       !parsed.typography ||
       typeof parsed.typography.heading !== 'string' ||
       typeof parsed.typography.body !== 'string' ||
@@ -225,7 +284,7 @@ CRITICAL: "palette" MUST contain exactly 5 colors, and every "hex" MUST be a 6-d
     }
 
     const moodboard: Moodboard = {
-      palette: parsed.palette.map((c: any) => ({
+      palette: parsed.palette.map((c) => ({
         name: String(c.name).trim(),
         hex: String(c.hex).trim().toLowerCase(),
         role: String(c.role).trim(),
@@ -235,10 +294,10 @@ CRITICAL: "palette" MUST contain exactly 5 colors, and every "hex" MUST be a 6-d
         body: String(parsed.typography.body).trim(),
         vibe: String(parsed.typography.vibe).trim(),
       },
-      motifs: parsed.motifs.map((m: any) => String(m).trim()),
-      decor: parsed.decor.map((d: any) => String(d).trim()),
-      outfitNotes: parsed.outfitNotes.map((o: any) => String(o).trim()),
-      playlistVibes: parsed.playlistVibes.map((p: any) => String(p).trim()),
+      motifs: parsed.motifs.map((m) => String(m).trim()),
+      decor: parsed.decor.map((d) => String(d).trim()),
+      outfitNotes: parsed.outfitNotes.map((o) => String(o).trim()),
+      playlistVibes: parsed.playlistVibes.map((p) => String(p).trim()),
     }
 
     return { moodboard, generatedBy: 'gemini' }
@@ -250,7 +309,7 @@ CRITICAL: "palette" MUST contain exactly 5 colors, and every "hex" MUST be a 6-d
 
 export async function rebalanceBudget(
   brief: Brief,
-  budget: BudgetItem[]
+  budget: BudgetItem[],
 ): Promise<{ proposal: BudgetRebalanceProposal; ai: boolean }> {
   const offline = generateOfflineBudgetRebalance(brief, budget)
 
@@ -266,7 +325,11 @@ export async function rebalanceBudget(
     const prompt = `You are an elite event finance consultant for Soirée.
 The client is planning a ${brief.type} in ${brief.city} with a total budget of ${brief.budget} ${cur}.
 Here is the current budget breakdown with verified spend:
-${JSON.stringify(budget.map(b => ({ id: b.id, category: b.category, allocated: b.allocated, spent: b.spent })), null, 2)}
+${JSON.stringify(
+  budget.map((b) => ({ id: b.id, category: b.category, allocated: b.allocated, spent: b.spent })),
+  null,
+  2,
+)}
 
 Some categories may have exceeded their allocations. Propose a budget redistribution.
 CRITICAL RULES:
@@ -295,7 +358,7 @@ Return JSON in this exact structure:
             responseMimeType: 'application/json',
           },
         }),
-      }
+      },
     )
 
     if (!res.ok) {
@@ -303,7 +366,14 @@ Return JSON in this exact structure:
       return { proposal: offline, ai: false }
     }
 
-    const data: any = await res.json()
+    interface GeminiRebalanceResponse {
+      candidates?: Array<{
+        content?: {
+          parts?: Array<{ text?: string }>
+        }
+      }>
+    }
+    const data = (await res.json()) as GeminiRebalanceResponse
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text
     if (!text) {
       return { proposal: offline, ai: false }
@@ -354,13 +424,13 @@ Return JSON in this exact structure:
     })
 
     // Rule 1: Sum MUST equal brief.budget exactly
-    let currentSum = clampedItems.reduce((s, i) => s + i.to, 0)
+    const currentSum = clampedItems.reduce((s, i) => s + i.to, 0)
     const diff = totalBudget - currentSum
 
     if (diff !== 0) {
       const adjustable = clampedItems
         .filter((i) => !i.contingency && i.to + diff >= i.spent)
-        .sort((a, b) => (b.to - b.spent) - (a.to - a.spent))
+        .sort((a, b) => b.to - b.spent - (a.to - a.spent))
 
       if (adjustable.length > 0) {
         adjustable[0].to += diff
@@ -391,9 +461,7 @@ Return JSON in this exact structure:
         to: i.to,
         reason: i.reason,
       })),
-      summary: typeof parsed.summary === 'string' && parsed.summary.trim()
-        ? parsed.summary.trim()
-        : offline.summary,
+      summary: typeof parsed.summary === 'string' && parsed.summary.trim() ? parsed.summary.trim() : offline.summary,
     }
 
     return { proposal, ai: true }
@@ -402,4 +470,3 @@ Return JSON in this exact structure:
     return { proposal: offline, ai: false }
   }
 }
-

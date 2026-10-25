@@ -25,9 +25,12 @@ export function VectorScene({ className = '', mirror = false }: { className?: st
   useEffect(() => {
     const el = ref.current
     if (!el || typeof IntersectionObserver === 'undefined') return
-    const obs = new IntersectionObserver(([entry]) => {
-      setIsVisible(entry?.isIntersecting ?? true)
-    }, { threshold: 0.05 })
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(entry?.isIntersecting ?? true)
+      },
+      { threshold: 0.05 },
+    )
     obs.observe(el)
     return () => obs.disconnect()
   }, [])
@@ -45,12 +48,28 @@ export function VectorScene({ className = '', mirror = false }: { className?: st
       tint: r() > 0.5 ? 'url(#gPetalA)' : 'url(#gPetalB)',
     }))
     const pearls = [
-      { x: 880, y: 360, r: 15 }, { x: 1010, y: 640, r: 11 }, { x: 1290, y: 300, r: 9 },
-      { x: 1400, y: 560, r: 13 }, { x: 790, y: 560, r: 7 }, { x: 1230, y: 700, r: 8 },
-      { x: 960, y: 250, r: 6 }, { x: 1490, y: 380, r: 6 },
+      { x: 880, y: 360, r: 15 },
+      { x: 1010, y: 640, r: 11 },
+      { x: 1290, y: 300, r: 9 },
+      { x: 1400, y: 560, r: 13 },
+      { x: 790, y: 560, r: 7 },
+      { x: 1230, y: 700, r: 8 },
+      { x: 960, y: 250, r: 6 },
+      { x: 1490, y: 380, r: 6 },
     ]
-    const drift = Array.from({ length: 14 }, (_, i) => ({ id: i, x: 640 + r() * 940, y: 60 + r() * 760, r: 1.5 + r() * 2.5, d: 3 + r() * 5, delay: -r() * 6 }))
-    const sparkles = [{ x: 1480, y: 700, s: 1 }, { x: 760, y: 330, s: 0.6 }, { x: 1330, y: 160, s: 0.7 }]
+    const drift = Array.from({ length: 14 }, (_, i) => ({
+      id: i,
+      x: 640 + r() * 940,
+      y: 60 + r() * 760,
+      r: 1.5 + r() * 2.5,
+      d: 3 + r() * 5,
+      delay: -r() * 6,
+    }))
+    const sparkles = [
+      { x: 1480, y: 700, s: 1 },
+      { x: 760, y: 330, s: 0.6 },
+      { x: 1330, y: 160, s: 0.7 },
+    ]
     const ribbons = Array.from({ length: 7 }, (_, i) => {
       const o = i * 11
       const k = i - 3
@@ -120,9 +139,15 @@ export function VectorScene({ className = '', mirror = false }: { className?: st
           <stop offset="0" stopColor="#fff" stopOpacity=".65" />
           <stop offset="1" stopColor="#fff" stopOpacity="0" />
         </radialGradient>
-        <filter id="fBlur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="14" /></filter>
-        <filter id="fSoft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.2" /></filter>
-        <filter id="fShadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="18" /></filter>
+        <filter id="fBlur" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="14" />
+        </filter>
+        <filter id="fSoft" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="2.2" />
+        </filter>
+        <filter id="fShadow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="18" />
+        </filter>
 
         {/* one lotus petal pointing up from the origin */}
         <path id="petal" d="M0 0 C -34 -34 -38 -104 0 -150 C 38 -104 34 -34 0 0 Z" />
@@ -137,10 +162,14 @@ export function VectorScene({ className = '', mirror = false }: { className?: st
       {/* ghost flower silhouettes behind */}
       <g opacity=".16" fill="#8f6f8a" filter="url(#fSoft)">
         <g transform="translate(1270 640) scale(1.6)">
-          {[-60, -30, 0, 30, 60].map((a) => <use key={a} href="#petal" transform={`rotate(${a})`} />)}
+          {[-60, -30, 0, 30, 60].map((a) => (
+            <use key={a} href="#petal" transform={`rotate(${a})`} />
+          ))}
         </g>
         <g transform="translate(1000 700) scale(1.1)">
-          {[-50, -20, 10, 40].map((a) => <use key={a} href="#petalSm" transform={`rotate(${a})`} />)}
+          {[-50, -20, 10, 40].map((a) => (
+            <use key={a} href="#petalSm" transform={`rotate(${a})`} />
+          ))}
         </g>
       </g>
 
@@ -161,22 +190,51 @@ export function VectorScene({ className = '', mirror = false }: { className?: st
       {/* glass shards */}
       <g>
         <g className="v-float" style={{ animationDuration: '12s' }}>
-          <polygon points="1370,170 1600,110 1600,260 1420,300" fill="url(#gShard)" stroke="#fff" strokeOpacity=".5" strokeWidth="1.5" />
+          <polygon
+            points="1370,170 1600,110 1600,260 1420,300"
+            fill="url(#gShard)"
+            stroke="#fff"
+            strokeOpacity=".5"
+            strokeWidth="1.5"
+          />
         </g>
         <g className="v-float" style={{ animationDuration: '10s', animationDelay: '-3s' }}>
-          <path d="M 800 400 Q 880 350 960 372 L 940 392 Q 880 380 820 420 Z" fill="url(#gShard)" stroke="#fff" strokeOpacity=".7" strokeWidth="1.5" />
+          <path
+            d="M 800 400 Q 880 350 960 372 L 940 392 Q 880 380 820 420 Z"
+            fill="url(#gShard)"
+            stroke="#fff"
+            strokeOpacity=".7"
+            strokeWidth="1.5"
+          />
         </g>
         <g className="v-float" style={{ animationDuration: '14s', animationDelay: '-6s' }}>
-          <path d="M 1120 760 L 1210 700 Q 1240 690 1250 720 L 1170 790 Z" fill="url(#gShard)" stroke="#fff" strokeOpacity=".6" strokeWidth="1.5" />
+          <path
+            d="M 1120 760 L 1210 700 Q 1240 690 1250 720 L 1170 790 Z"
+            fill="url(#gShard)"
+            stroke="#fff"
+            strokeOpacity=".6"
+            strokeWidth="1.5"
+          />
         </g>
         <g className="v-float" style={{ animationDuration: '11s', animationDelay: '-2s' }}>
-          <path d="M 1000 160 Q 1100 80 1210 120 Q 1120 130 1040 200 Z" fill="url(#gShard)" stroke="#fff" strokeOpacity=".55" strokeWidth="1.5" />
+          <path
+            d="M 1000 160 Q 1100 80 1210 120 Q 1120 130 1040 200 Z"
+            fill="url(#gShard)"
+            stroke="#fff"
+            strokeOpacity=".55"
+            strokeWidth="1.5"
+          />
         </g>
       </g>
 
       {/* soft silk ribbon */}
       <g className="v-sway" style={{ animationDuration: '9s' }}>
-        <path d="M 700 760 C 820 640 930 800 1060 690 C 1150 620 1240 700 1330 640 C 1250 760 1130 760 1040 800 C 930 850 800 800 700 760 Z" fill="#f8e6e3" opacity=".78" filter="url(#fSoft)" />
+        <path
+          d="M 700 760 C 820 640 930 800 1060 690 C 1150 620 1240 700 1330 640 C 1250 760 1130 760 1040 800 C 930 850 800 800 700 760 Z"
+          fill="#f8e6e3"
+          opacity=".78"
+          filter="url(#fSoft)"
+        />
         <path d="M 700 760 C 820 640 930 800 1060 690" fill="none" stroke="#fff" strokeOpacity=".8" strokeWidth="2" />
       </g>
 
@@ -184,12 +242,53 @@ export function VectorScene({ className = '', mirror = false }: { className?: st
       <g className="v-ribbons">
         {ribbons.map((d, i) => (
           <g key={i}>
-            <path d={d} fill="none" stroke="url(#gGold)" strokeWidth={i === 3 ? 2.6 : 1.5} strokeLinecap="round" opacity={i === 3 ? 1 : 0.65} className="v-draw" style={{ animationDelay: `${i * 0.18}s` }} pathLength={1} />
-            <path d={d} fill="none" stroke="#fff6d8" strokeWidth="1.6" strokeLinecap="round" strokeDasharray="90 900" className="v-flow" style={{ animationDuration: `${7 + i * 1.3}s`, animationDelay: `${-i * 1.1}s` }} opacity=".9" />
+            <path
+              d={d}
+              fill="none"
+              stroke="url(#gGold)"
+              strokeWidth={i === 3 ? 2.6 : 1.5}
+              strokeLinecap="round"
+              opacity={i === 3 ? 1 : 0.65}
+              className="v-draw"
+              style={{ animationDelay: `${i * 0.18}s` }}
+              pathLength={1}
+            />
+            <path
+              d={d}
+              fill="none"
+              stroke="#fff6d8"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeDasharray="90 900"
+              className="v-flow"
+              style={{ animationDuration: `${7 + i * 1.3}s`, animationDelay: `${-i * 1.1}s` }}
+              opacity=".9"
+            />
           </g>
         ))}
-        <ellipse cx={CX} cy={CY + 150} rx="190" ry="60" fill="none" stroke="#fff" strokeOpacity=".7" strokeWidth="2" className="v-spin" />
-        <ellipse cx={CX} cy={CY + 150} rx="230" ry="82" fill="none" stroke="url(#gGold)" strokeWidth="1.2" opacity=".7" className="v-spin" style={{ animationDirection: 'reverse', animationDuration: '34s' }} />
+        <ellipse
+          cx={CX}
+          cy={CY + 150}
+          rx="190"
+          ry="60"
+          fill="none"
+          stroke="#fff"
+          strokeOpacity=".7"
+          strokeWidth="2"
+          className="v-spin"
+        />
+        <ellipse
+          cx={CX}
+          cy={CY + 150}
+          rx="230"
+          ry="82"
+          fill="none"
+          stroke="url(#gGold)"
+          strokeWidth="1.2"
+          opacity=".7"
+          className="v-spin"
+          style={{ animationDirection: 'reverse', animationDuration: '34s' }}
+        />
       </g>
 
       {/* GLASS LOTUS */}
@@ -198,17 +297,44 @@ export function VectorScene({ className = '', mirror = false }: { className?: st
           {/* back petals */}
           <g className="v-breathe" style={{ transformOrigin: '0 0' }}>
             {[-72, -48, -24, 24, 48, 72].map((a) => (
-              <use key={a} href="#petal" transform={`rotate(${a}) scale(1.35)`} fill="url(#gGlass)" stroke="#fff" strokeOpacity=".85" strokeWidth="1.6" />
+              <use
+                key={a}
+                href="#petal"
+                transform={`rotate(${a}) scale(1.35)`}
+                fill="url(#gGlass)"
+                stroke="#fff"
+                strokeOpacity=".85"
+                strokeWidth="1.6"
+              />
             ))}
             {[-60, -36, -12, 12, 36, 60].map((a) => (
-              <use key={a} href="#petalSm" transform={`rotate(${a}) scale(1.45)`} fill="url(#gGlass)" stroke="#f3d4d6" strokeOpacity=".9" strokeWidth="1.3" />
+              <use
+                key={a}
+                href="#petalSm"
+                transform={`rotate(${a}) scale(1.45)`}
+                fill="url(#gGlass)"
+                stroke="#f3d4d6"
+                strokeOpacity=".9"
+                strokeWidth="1.3"
+              />
             ))}
           </g>
           {/* core */}
           <circle cx="0" cy="-96" r="52" fill="url(#gCore)" />
           {Array.from({ length: 14 }, (_, i) => {
             const a = (-70 + i * 10.8) * (Math.PI / 180)
-            return <line key={i} x1="0" y1="-84" x2={Math.sin(a) * 64} y2={-84 - Math.cos(a) * 60} stroke="#e9a27f" strokeWidth="1.6" strokeLinecap="round" />
+            return (
+              <line
+                key={i}
+                x1="0"
+                y1="-84"
+                x2={Math.sin(a) * 64}
+                y2={-84 - Math.cos(a) * 60}
+                stroke="#e9a27f"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            )
           })}
           {Array.from({ length: 14 }, (_, i) => {
             const a = (-70 + i * 10.8) * (Math.PI / 180)
@@ -216,14 +342,26 @@ export function VectorScene({ className = '', mirror = false }: { className?: st
           })}
           {/* front petals */}
           {[-40, 0, 40].map((a) => (
-            <use key={a} href="#petalSm" transform={`rotate(${a}) scale(1.1)`} fill="url(#gGlass)" stroke="#fff" strokeOpacity=".95" strokeWidth="1.6" />
+            <use
+              key={a}
+              href="#petalSm"
+              transform={`rotate(${a}) scale(1.1)`}
+              fill="url(#gGlass)"
+              stroke="#fff"
+              strokeOpacity=".95"
+              strokeWidth="1.6"
+            />
           ))}
         </g>
       </g>
 
       {/* PEARLS */}
       {pearls.map((p, i) => (
-        <g key={i} className="v-float" style={{ animationDuration: `${7 + (i % 4) * 2}s`, animationDelay: `${-i * 1.3}s` }}>
+        <g
+          key={i}
+          className="v-float"
+          style={{ animationDuration: `${7 + (i % 4) * 2}s`, animationDelay: `${-i * 1.3}s` }}
+        >
           <circle cx={p.x} cy={p.y} r={p.r} fill="url(#gPearl)" />
           <circle cx={p.x - p.r * 0.35} cy={p.y - p.r * 0.38} r={p.r * 0.22} fill="#fff" opacity=".95" />
         </g>
@@ -233,20 +371,42 @@ export function VectorScene({ className = '', mirror = false }: { className?: st
       {petalsFar.map((p) => (
         <g key={p.id} transform={`translate(${p.x} ${p.y})`}>
           <g className="v-petal" style={{ animationDuration: `${p.dur}s`, animationDelay: `${p.delay}s` }}>
-            <use href="#fallen" transform={`rotate(${p.rot}) scale(${p.s * 1.15})`} fill={p.tint} stroke="#fff" strokeOpacity=".7" strokeWidth="1" opacity=".92" />
+            <use
+              href="#fallen"
+              transform={`rotate(${p.rot}) scale(${p.s * 1.15})`}
+              fill={p.tint}
+              stroke="#fff"
+              strokeOpacity=".7"
+              strokeWidth="1"
+              opacity=".92"
+            />
           </g>
         </g>
       ))}
 
       {/* dust motes */}
       {drift.map((d) => (
-        <circle key={d.id} cx={d.x} cy={d.y} r={d.r} fill="#fff" className="v-twinkle" style={{ animationDuration: `${d.d}s`, animationDelay: `${d.delay}s` }} />
+        <circle
+          key={d.id}
+          cx={d.x}
+          cy={d.y}
+          r={d.r}
+          fill="#fff"
+          className="v-twinkle"
+          style={{ animationDuration: `${d.d}s`, animationDelay: `${d.delay}s` }}
+        />
       ))}
 
       {/* sparkles */}
       {sparkles.map((s, i) => (
         <g key={i} transform={`translate(${s.x} ${s.y}) scale(${s.s})`}>
-          <use href="#spark" fill="#fff" opacity=".9" className="v-twinkle" style={{ animationDuration: `${3 + i}s`, animationDelay: `${-i}s` }} />
+          <use
+            href="#spark"
+            fill="#fff"
+            opacity=".9"
+            className="v-twinkle"
+            style={{ animationDuration: `${3 + i}s`, animationDelay: `${-i}s` }}
+          />
         </g>
       ))}
     </svg>

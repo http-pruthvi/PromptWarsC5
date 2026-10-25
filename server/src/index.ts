@@ -33,13 +33,13 @@ if (process.env.NODE_ENV === 'production') {
   }
   if (secret.length < 32) {
     console.error(
-      `[FATAL] Server startup aborted: In production mode, JWT_SECRET must be at least 32 characters long for cryptographic security (current length: ${secret.length} characters).`
+      `[FATAL] Server startup aborted: In production mode, JWT_SECRET must be at least 32 characters long for cryptographic security (current length: ${secret.length} characters).`,
     )
     process.exit(1)
   }
   if (KNOWN_INSECURE_SECRETS.has(secret.toLowerCase())) {
     console.error(
-      '[FATAL] Server startup aborted: In production mode, JWT_SECRET cannot match a default, trivial, or well-known placeholder string.'
+      '[FATAL] Server startup aborted: In production mode, JWT_SECRET cannot match a default, trivial, or well-known placeholder string.',
     )
     process.exit(1)
   }
@@ -51,7 +51,9 @@ initDb()
 const PORT = process.env.PORT || 4000
 
 app.listen(PORT, () => {
-  console.log(`[Soirée Backend] Server listening on http://localhost:${PORT}`)
-  console.log(`[Soirée Backend] Database ready at server/data/soiree.db`)
-  console.log(`[Soirée Backend] Gemini GenAI mode: ${process.env.GEMINI_API_KEY ? 'Active (API key detected)' : 'Offline smart engine (No key needed)'}`)
+  console.info(`[Soirée Backend] Server listening on http://localhost:${PORT}`)
+  console.info(`[Soirée Backend] Database ready at server/data/soiree.db`)
+  console.info(
+    `[Soirée Backend] Gemini GenAI mode: ${process.env.GEMINI_API_KEY ? 'Active (API key detected)' : 'Offline smart engine (No key needed)'}`,
+  )
 })

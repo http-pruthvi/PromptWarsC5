@@ -15,10 +15,19 @@
     "dev": "concurrently -k -p \"[{name}]\" -n \"server,client\" -c \"cyan,magenta\" \"npm run dev -w @soiree/server\" \"npm run dev -w @soiree/client\"",
     "build": "npm run build -w @soiree/shared && npm run build -w @soiree/server && npm run build -w @soiree/client",
     "start": "npm run start -w @soiree/server",
-    "test": "npm run test -w @soiree/server"
+    "test": "npm run test -w @soiree/server",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "concurrently": "^9.1.0",
-    "lighthouse": "^13.5.0"
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "lighthouse": "^13.5.0",
+    "prettier": "^3.9.10",
+    "typescript-eslint": "^8.72.0"
   }
 }

@@ -93,17 +93,22 @@ app.use('/api/health', healthRouter)
 const clientDistPath = path.resolve(__dirname, '../../client/dist')
 if (fs.existsSync(clientDistPath)) {
   // Long-lived cache for hashed Vite assets (1 year, immutable)
-  app.use('/assets', express.static(path.join(clientDistPath, 'assets'), {
-    maxAge: 31536000000,
-    immutable: true,
-  }))
+  app.use(
+    '/assets',
+    express.static(path.join(clientDistPath, 'assets'), {
+      maxAge: 31536000000,
+      immutable: true,
+    }),
+  )
 
   // Unhashed assets (favicon, manifest, etc.) with validation
-  app.use(express.static(clientDistPath, {
-    maxAge: 0,
-    etag: true,
-    lastModified: true,
-  }))
+  app.use(
+    express.static(clientDistPath, {
+      maxAge: 0,
+      etag: true,
+      lastModified: true,
+    }),
+  )
 
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api')) {

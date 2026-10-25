@@ -2,13 +2,27 @@ import { motion, useReducedMotion } from 'framer-motion'
 import React, { useMemo } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
 
-export const PALETTE = ['#c4a05a', '#d6a3a9', '#a98ba5', '#5b3f55', '#e8d6a8', '#b88a8f', '#8f7a9c', '#c9a98a', '#9fb3a0']
+export const PALETTE = [
+  '#c4a05a',
+  '#d6a3a9',
+  '#a98ba5',
+  '#5b3f55',
+  '#e8d6a8',
+  '#b88a8f',
+  '#8f7a9c',
+  '#c9a98a',
+  '#9fb3a0',
+]
 
 export function Logo({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden>
       <path d="M16 3c4.2 5 4.2 11 0 17-4.2-6-4.2-12 0-17Z" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M4 13c5.5-.2 9.5 2.6 12 8-5.5.2-9.5-2.6-12-8Zm24 0c-2.5 5.4-6.5 8.2-12 8 2.5-5.4 6.5-8.2 12-8Z" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M4 13c5.5-.2 9.5 2.6 12 8-5.5.2-9.5-2.6-12-8Zm24 0c-2.5 5.4-6.5 8.2-12 8 2.5-5.4 6.5-8.2 12-8Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
       <circle cx="16" cy="26" r="2.2" fill="currentColor" />
     </svg>
   )
@@ -159,7 +173,13 @@ export function Toast({ message }: { message: string | null }) {
   return (
     <>
       {message && (
-        <motion.div className="toast" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} role="status">
+        <motion.div
+          className="toast"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          role="status"
+        >
           {message}
         </motion.div>
       )}

@@ -1,4 +1,17 @@
-import type { Brief, BudgetItem, BudgetRebalanceChange, BudgetRebalanceProposal, Currency, EventType, IdeaGroup, Milestone, Moodboard, PaletteColor, Plan, Vendor } from '@soiree/shared'
+import type {
+  Brief,
+  BudgetItem,
+  BudgetRebalanceChange,
+  BudgetRebalanceProposal,
+  Currency,
+  EventType,
+  IdeaGroup,
+  Milestone,
+  Moodboard,
+  PaletteColor,
+  Plan,
+  Vendor,
+} from '@soiree/shared'
 
 export const uid = () => Math.random().toString(36).slice(2, 10)
 
@@ -26,9 +39,21 @@ function pick<T>(arr: T[], n: number): T[] {
   return copy.slice(0, n)
 }
 
-interface BudgetTpl { category: string; percent: number; note: string }
-interface MilestoneTpl { label: string; detail: string; weeksBefore: number }
-interface VendorTpl { category: string; percent: number; tips: string }
+interface BudgetTpl {
+  category: string
+  percent: number
+  note: string
+}
+interface MilestoneTpl {
+  label: string
+  detail: string
+  weeksBefore: number
+}
+interface VendorTpl {
+  category: string
+  percent: number
+  tips: string
+}
 
 const BUDGET: Record<EventType, BudgetTpl[]> = {
   wedding: [
@@ -63,10 +88,26 @@ const BUDGET: Record<EventType, BudgetTpl[]> = {
 
 const TIMELINE: Record<EventType, MilestoneTpl[]> = {
   wedding: [
-    { label: 'Set budget & guest-list draft', detail: 'Agree on who is paying for what and a first guest count.', weeksBefore: 40 },
-    { label: 'Shortlist and book venue', detail: 'Visit 3–4 venues; lock the date before anything else.', weeksBefore: 36 },
-    { label: 'Hire planner / key vendors', detail: 'Photographer, caterer and decorator book up fastest.', weeksBefore: 30 },
-    { label: 'Finalise theme & colour palette', detail: 'Moodboard, decor direction and outfit palette.', weeksBefore: 24 },
+    {
+      label: 'Set budget & guest-list draft',
+      detail: 'Agree on who is paying for what and a first guest count.',
+      weeksBefore: 40,
+    },
+    {
+      label: 'Shortlist and book venue',
+      detail: 'Visit 3–4 venues; lock the date before anything else.',
+      weeksBefore: 36,
+    },
+    {
+      label: 'Hire planner / key vendors',
+      detail: 'Photographer, caterer and decorator book up fastest.',
+      weeksBefore: 30,
+    },
+    {
+      label: 'Finalise theme & colour palette',
+      detail: 'Moodboard, decor direction and outfit palette.',
+      weeksBefore: 24,
+    },
     { label: 'Send save-the-dates', detail: 'Especially for guests who must travel.', weeksBefore: 20 },
     { label: 'Book attire, makeup & mehendi', detail: 'Start fittings; schedule trials.', weeksBefore: 16 },
     { label: 'Menu tasting & music brief', detail: 'Finalise menu, playlist and ceremony flow.', weeksBefore: 10 },
@@ -88,12 +129,24 @@ const TIMELINE: Record<EventType, MilestoneTpl[]> = {
   ],
   community: [
     { label: 'Define goals, audience & budget', detail: 'One-line purpose and success metric.', weeksBefore: 12 },
-    { label: 'Form core committee & roles', detail: 'Assign owners: programme, logistics, finance, outreach.', weeksBefore: 11 },
-    { label: 'Secure venue & permissions', detail: 'Permits, fire/safety, police intimation if needed.', weeksBefore: 9 },
+    {
+      label: 'Form core committee & roles',
+      detail: 'Assign owners: programme, logistics, finance, outreach.',
+      weeksBefore: 11,
+    },
+    {
+      label: 'Secure venue & permissions',
+      detail: 'Permits, fire/safety, police intimation if needed.',
+      weeksBefore: 9,
+    },
     { label: 'Lock programme & performers', detail: 'Confirm speakers and run-of-show.', weeksBefore: 7 },
     { label: 'Launch promotion', detail: 'Posters, WhatsApp groups, local press, social.', weeksBefore: 5 },
     { label: 'Recruit & brief volunteers', detail: 'Shifts, tees, ID cards, responsibilities.', weeksBefore: 4 },
-    { label: 'Book sound, lights & catering', detail: 'Site visit with vendors; confirm power backup.', weeksBefore: 3 },
+    {
+      label: 'Book sound, lights & catering',
+      detail: 'Site visit with vendors; confirm power backup.',
+      weeksBefore: 3,
+    },
     { label: 'Registrations & headcount check', detail: 'Update food and seating numbers.', weeksBefore: 1 },
     { label: 'Dry run & day-of checklist', detail: 'Walk the venue; assign emergency contacts.', weeksBefore: 0 },
   ],
@@ -131,32 +184,146 @@ const VENDORS: Record<EventType, VendorTpl[]> = {
 }
 
 const VIBES: Array<{ keys: string[]; theme: string; palette: string; decor: string }> = [
-  { keys: ['floral', 'garden', 'spring', 'romantic', 'blush', 'pastel'], theme: 'Blush Garden', palette: 'Blush, ivory, sage and champagne gold', decor: 'Hanging florals, pearl strings and soft fairy lights' },
-  { keys: ['royal', 'traditional', 'regal', 'palace', 'grand'], theme: 'Royal Heritage', palette: 'Deep maroon, antique gold and cream', decor: 'Brass diyas, marigold canopies and embroidered drapes' },
-  { keys: ['boho', 'rustic', 'earthy', 'outdoor', 'natural'], theme: 'Boho Rustic', palette: 'Terracotta, sand and olive', decor: 'Macramé, pampas grass and wooden signage' },
-  { keys: ['modern', 'minimal', 'chic', 'elegant', 'luxury'], theme: 'Modern Minimal', palette: 'Ivory, charcoal and brushed gold', decor: 'Clean lines, acrylic signage and statement lighting' },
-  { keys: ['fun', 'colorful', 'colourful', 'party', 'vibrant', 'retro'], theme: 'Colour Pop Carnival', palette: 'Coral, teal, mustard and magenta', decor: 'Balloon arches, neon signs and photo-booth props' },
-  { keys: ['beach', 'sea', 'tropical', 'summer'], theme: 'Coastal Breeze', palette: 'Sky blue, coral and sand', decor: 'Driftwood, linen drapes and lanterns' },
+  {
+    keys: ['floral', 'garden', 'spring', 'romantic', 'blush', 'pastel'],
+    theme: 'Blush Garden',
+    palette: 'Blush, ivory, sage and champagne gold',
+    decor: 'Hanging florals, pearl strings and soft fairy lights',
+  },
+  {
+    keys: ['royal', 'traditional', 'regal', 'palace', 'grand'],
+    theme: 'Royal Heritage',
+    palette: 'Deep maroon, antique gold and cream',
+    decor: 'Brass diyas, marigold canopies and embroidered drapes',
+  },
+  {
+    keys: ['boho', 'rustic', 'earthy', 'outdoor', 'natural'],
+    theme: 'Boho Rustic',
+    palette: 'Terracotta, sand and olive',
+    decor: 'Macramé, pampas grass and wooden signage',
+  },
+  {
+    keys: ['modern', 'minimal', 'chic', 'elegant', 'luxury'],
+    theme: 'Modern Minimal',
+    palette: 'Ivory, charcoal and brushed gold',
+    decor: 'Clean lines, acrylic signage and statement lighting',
+  },
+  {
+    keys: ['fun', 'colorful', 'colourful', 'party', 'vibrant', 'retro'],
+    theme: 'Colour Pop Carnival',
+    palette: 'Coral, teal, mustard and magenta',
+    decor: 'Balloon arches, neon signs and photo-booth props',
+  },
+  {
+    keys: ['beach', 'sea', 'tropical', 'summer'],
+    theme: 'Coastal Breeze',
+    palette: 'Sky blue, coral and sand',
+    decor: 'Driftwood, linen drapes and lanterns',
+  },
 ]
 
 const POOLS: Record<EventType, Record<string, string[]>> = {
   wedding: {
-    'Ceremony moments': ['Flower-petal shower exit', 'Handwritten vows exchanged before the ceremony', 'Family blessing circle', 'Live string-quartet processional', 'Welcome mocktail bar with signature drinks', 'Memory table honouring loved ones'],
-    'Menu & drinks': ['Regional thali with live chaat counters', 'Midnight snack station (pav bhaji, kulhad chai)', 'Signature "his & hers" mocktails', 'Dessert table with mini jalebis & rasmalai shots', 'South-Indian filter-coffee cart', 'Farm-to-table tasting menu'],
-    'Entertainment': ['Choreographed sangeet family performances', 'Live dhol & band baraat entry', 'Caricature artist during cocktail hour', 'Photo booth with instant prints', 'Acoustic sunset set', 'Fireworks or cold-pyro finale'],
-    'Guest experience': ['Custom welcome hampers with local treats', 'QR-code album for guest photo uploads', 'Shuttle schedule card in each room', 'Kids’ activity corner with a sitter', 'Wedding-day WhatsApp group for updates', 'Thank-you plantable seed favours'],
+    'Ceremony moments': [
+      'Flower-petal shower exit',
+      'Handwritten vows exchanged before the ceremony',
+      'Family blessing circle',
+      'Live string-quartet processional',
+      'Welcome mocktail bar with signature drinks',
+      'Memory table honouring loved ones',
+    ],
+    'Menu & drinks': [
+      'Regional thali with live chaat counters',
+      'Midnight snack station (pav bhaji, kulhad chai)',
+      'Signature "his & hers" mocktails',
+      'Dessert table with mini jalebis & rasmalai shots',
+      'South-Indian filter-coffee cart',
+      'Farm-to-table tasting menu',
+    ],
+    Entertainment: [
+      'Choreographed sangeet family performances',
+      'Live dhol & band baraat entry',
+      'Caricature artist during cocktail hour',
+      'Photo booth with instant prints',
+      'Acoustic sunset set',
+      'Fireworks or cold-pyro finale',
+    ],
+    'Guest experience': [
+      'Custom welcome hampers with local treats',
+      'QR-code album for guest photo uploads',
+      'Shuttle schedule card in each room',
+      'Kids’ activity corner with a sitter',
+      'Wedding-day WhatsApp group for updates',
+      'Thank-you plantable seed favours',
+    ],
   },
   birthday: {
-    'Activities': ['Treasure hunt with riddle clues', 'DIY cupcake decorating station', 'Karaoke face-off', 'Backyard cinema under fairy lights', 'Mini Olympics with prizes', 'Memory jar — guests write a wish'],
-    'Menu & cake': ['Build-your-own pizza bar', 'Dessert grazing table', 'Signature mocktails', 'Smash cake for the little ones', 'Chaat & street-food counters', 'Theme-matched cupcake tower'],
-    'Surprise ideas': ['Video montage from friends and family', 'Midnight countdown surprise', 'Flash-mob entrance', 'Letters from loved ones, opened on the day', 'Hidden balloon-pop with confetti', 'Custom playlist of their life songs'],
-    'Favours': ['Personalised cookie boxes', 'Mini plant saplings', 'Polaroid snapshots', 'Handwritten thank-you notes', 'Seed-paper bookmarks', 'Custom sticker sheets'],
+    Activities: [
+      'Treasure hunt with riddle clues',
+      'DIY cupcake decorating station',
+      'Karaoke face-off',
+      'Backyard cinema under fairy lights',
+      'Mini Olympics with prizes',
+      'Memory jar — guests write a wish',
+    ],
+    'Menu & cake': [
+      'Build-your-own pizza bar',
+      'Dessert grazing table',
+      'Signature mocktails',
+      'Smash cake for the little ones',
+      'Chaat & street-food counters',
+      'Theme-matched cupcake tower',
+    ],
+    'Surprise ideas': [
+      'Video montage from friends and family',
+      'Midnight countdown surprise',
+      'Flash-mob entrance',
+      'Letters from loved ones, opened on the day',
+      'Hidden balloon-pop with confetti',
+      'Custom playlist of their life songs',
+    ],
+    Favours: [
+      'Personalised cookie boxes',
+      'Mini plant saplings',
+      'Polaroid snapshots',
+      'Handwritten thank-you notes',
+      'Seed-paper bookmarks',
+      'Custom sticker sheets',
+    ],
   },
   community: {
-    'Engagement': ['Live polls and Q&A on a shared screen', 'Local artisan pop-up market', 'Community story wall', 'Open-mic hour for local talent', 'Kids’ art and storytelling corner', 'Photo-booth with event hashtag'],
-    'Programme flow': ['Opening invocation and welcome note', 'Keynote of 15 minutes max', 'Panel with local changemakers', 'Cultural performance block', 'Felicitation of volunteers', 'Closing group photograph'],
-    'Sustainability': ['Steel-plate and cup deposit scheme', 'Segregated waste stations', 'Plantable seed-paper badges', 'Digital programme via QR code', 'Local caterer and sourcing', 'Donate leftover food to a shelter'],
-    'Outreach': ['WhatsApp broadcast with RSVP link', 'Partner with local schools and RWAs', 'Influencer from the neighbourhood as ambassador', 'Reel-style teaser video', 'Poster at community notice boards', 'Early-bird volunteer sign-up'],
+    Engagement: [
+      'Live polls and Q&A on a shared screen',
+      'Local artisan pop-up market',
+      'Community story wall',
+      'Open-mic hour for local talent',
+      'Kids’ art and storytelling corner',
+      'Photo-booth with event hashtag',
+    ],
+    'Programme flow': [
+      'Opening invocation and welcome note',
+      'Keynote of 15 minutes max',
+      'Panel with local changemakers',
+      'Cultural performance block',
+      'Felicitation of volunteers',
+      'Closing group photograph',
+    ],
+    Sustainability: [
+      'Steel-plate and cup deposit scheme',
+      'Segregated waste stations',
+      'Plantable seed-paper badges',
+      'Digital programme via QR code',
+      'Local caterer and sourcing',
+      'Donate leftover food to a shelter',
+    ],
+    Outreach: [
+      'WhatsApp broadcast with RSVP link',
+      'Partner with local schools and RWAs',
+      'Influencer from the neighbourhood as ambassador',
+      'Reel-style teaser video',
+      'Poster at community notice boards',
+      'Early-bird volunteer sign-up',
+    ],
   },
 }
 
@@ -174,7 +341,9 @@ export function localIdeas(brief: Brief): IdeaGroup[] {
       `Theme: ${vibe.theme}`,
       `Palette: ${vibe.palette}`,
       `Decor: ${vibe.decor}`,
-      guests > 150 ? 'Zone the venue (lounge, dining, stage) to avoid crowding' : 'Keep seating intimate with long communal tables',
+      guests > 150
+        ? 'Zone the venue (lounge, dining, stage) to avoid crowding'
+        : 'Keep seating intimate with long communal tables',
     ],
   }
   const pool = POOLS[brief.type] || POOLS.wedding
@@ -191,7 +360,8 @@ export function buildBudget(brief: Brief, tpl: BudgetTpl[]): BudgetItem[] {
   const rows = normalizePercents(tpl)
   let used = 0
   return rows.map((r, i) => {
-    const allocated = i === rows.length - 1 ? brief.budget - used : Math.round(((brief.budget * r.percent) / 100) / 100) * 100
+    const allocated =
+      i === rows.length - 1 ? brief.budget - used : Math.round((brief.budget * r.percent) / 100 / 100) * 100
     used += allocated
     return { id: uid(), category: r.category, allocated: Math.max(0, allocated), spent: 0, note: r.note }
   })
@@ -228,12 +398,15 @@ export function generateLocalPlan(brief: Brief): Plan {
   const vibe = matchVibe(brief.vibe)
   const weeks = weeksUntil(brief.date)
   const perHead = brief.guests > 0 ? brief.budget / brief.guests : 0
-  const label = { wedding: 'wedding', birthday: 'birthday celebration', community: 'community event' }[brief.type] || 'celebration'
+  const label =
+    { wedding: 'wedding', birthday: 'birthday celebration', community: 'community event' }[brief.type] || 'celebration'
   const where = brief.city ? ` in ${brief.city}` : ''
   const summary =
     `${brief.title || 'Your ' + label} is a ${label}${where} for about ${brief.guests} guests, ${Math.round(weeks)} weeks away. ` +
     `At roughly ${money(perHead, brief.currency)} per guest, we suggest a "${vibe.theme}" direction. ` +
-    (weeks < 8 ? 'The timeline is tight, so we compressed the milestones and put venue and catering first.' : 'You have a healthy runway; book the big-ticket vendors first.')
+    (weeks < 8
+      ? 'The timeline is tight, so we compressed the milestones and put venue and catering first.'
+      : 'You have a healthy runway; book the big-ticket vendors first.')
   return {
     id: uid(),
     createdAt: Date.now(),
@@ -299,7 +472,13 @@ export function generateOfflineMoodboard(brief: Brief, extra?: string): Moodboar
       body: 'Plus Jakarta Sans',
       vibe: 'Regal Heritage & Grandeur',
     }
-    motifs = ['Mughal Floral Arches', 'Gilded Filigree Tracing', 'Jharokha Lattice Windows', 'Peacock Feather Plumes', 'Lotus Medallions']
+    motifs = [
+      'Mughal Floral Arches',
+      'Gilded Filigree Tracing',
+      'Jharokha Lattice Windows',
+      'Peacock Feather Plumes',
+      'Lotus Medallions',
+    ]
     decor = [
       'Velvet drape backdrops in deep crimson and peacock teal with antique tassels',
       'Handcrafted brass urli bowls with floating brass diyas and fresh jasmine',
@@ -312,7 +491,12 @@ export function generateOfflineMoodboard(brief: Brief, extra?: string): Moodboar
       'Bespoke organza stoles with scalloped gotta-patti borders',
       'Polki and heritage uncut diamond or kundan fine jewellery',
     ]
-    playlistVibes = ['Sufi instrumental fusion', 'Classical sitar & harp overtures', 'Grand royal shehnai welcoming procession', 'Acoustic orchestral Bollywood melodies']
+    playlistVibes = [
+      'Sufi instrumental fusion',
+      'Classical sitar & harp overtures',
+      'Grand royal shehnai welcoming procession',
+      'Acoustic orchestral Bollywood melodies',
+    ]
   } else if (/(pastel|blush|garden|romantic|floral|soft|ethereal|spring|meadow)/.test(text)) {
     palette = [
       { name: 'Dusty Rose Quartz', hex: '#d89a9e', role: 'Romantic Hero' },
@@ -326,7 +510,13 @@ export function generateOfflineMoodboard(brief: Brief, extra?: string): Moodboar
       body: 'Outfit',
       vibe: 'Ethereal Romance & Botanical Poetry',
     }
-    motifs = ['Pressed Botanical Sprigs', 'Delicate Cherry Blossoms', 'Calligraphic Script Florals', 'Scalloped Ribbons', 'Wildflower Trellises']
+    motifs = [
+      'Pressed Botanical Sprigs',
+      'Delicate Cherry Blossoms',
+      'Calligraphic Script Florals',
+      'Scalloped Ribbons',
+      'Wildflower Trellises',
+    ]
     decor = [
       'Wild asymmetrical floral arches with garden roses, hydrangeas, and sweet peas',
       'Floating fairy light canopies woven through sheer blush organza ceilings',
@@ -339,7 +529,12 @@ export function generateOfflineMoodboard(brief: Brief, extra?: string): Moodboar
       'Flowing tulle gowns with three-dimensional botanical appliqués',
       'Delicate pearls and rose gold accessories',
     ]
-    playlistVibes = ['Acoustic indie folk', 'Gentle Parisian café jazz', 'Live violin covers of modern love ballads', 'Dreamy sunset ambient acoustic']
+    playlistVibes = [
+      'Acoustic indie folk',
+      'Gentle Parisian café jazz',
+      'Live violin covers of modern love ballads',
+      'Dreamy sunset ambient acoustic',
+    ]
   } else if (/(boho|rustic|earth|autumn|sunset|warm|terracotta|desert|organic)/.test(text)) {
     palette = [
       { name: 'Sunbaked Terracotta', hex: '#c85a38', role: 'Earthy Lead' },
@@ -353,7 +548,13 @@ export function generateOfflineMoodboard(brief: Brief, extra?: string): Moodboar
       body: 'Plus Jakarta Sans',
       vibe: 'Wabi-Sabi Warmth & Earthy Soul',
     }
-    motifs = ['Pampas Grass Fronds', 'Geometric Macramé Knots', 'Celestial Crescent Moons', 'Sunburst Ray Inlays', 'Earthen Clay Pottery']
+    motifs = [
+      'Pampas Grass Fronds',
+      'Geometric Macramé Knots',
+      'Celestial Crescent Moons',
+      'Sunburst Ray Inlays',
+      'Earthen Clay Pottery',
+    ]
     decor = [
       'Towering plumes of pampas grass and dried floral clouds suspended from wood beams',
       'Low wooden communal seating with kilim rugs and textured jute floor cushions',
@@ -366,7 +567,12 @@ export function generateOfflineMoodboard(brief: Brief, extra?: string): Moodboar
       'Earthy rust or ochre slip dresses paired with antique brass arm cuffs',
       'Dried flower hairpins and oxidized brass statement pieces',
     ]
-    playlistVibes = ['Soulful indie acoustic', 'Sunset desert deep house ambient beats', 'Warm Spanish guitar melodies', 'Soul-stirring campfire acoustic jams']
+    playlistVibes = [
+      'Soulful indie acoustic',
+      'Sunset desert deep house ambient beats',
+      'Warm Spanish guitar melodies',
+      'Soul-stirring campfire acoustic jams',
+    ]
   } else if (/(modern|minimal|sleek|chic|black tie|monochrome|contemporary)/.test(text)) {
     palette = [
       { name: 'Obsidian Black', hex: '#161514', role: 'Architectural Anchor' },
@@ -380,7 +586,13 @@ export function generateOfflineMoodboard(brief: Brief, extra?: string): Moodboar
       body: 'Inter',
       vibe: 'Architectural Restraint & Modern Glamour',
     }
-    motifs = ['Clean Linear Geometry', 'Sculptural Arc Silhouettes', 'Minimalist Typography Monograms', 'Negative Space Framing', 'Fluted Glass Fluting']
+    motifs = [
+      'Clean Linear Geometry',
+      'Sculptural Arc Silhouettes',
+      'Minimalist Typography Monograms',
+      'Negative Space Framing',
+      'Fluted Glass Fluting',
+    ]
     decor = [
       'High-gloss black lacquer or brushed matte gold cocktail tables with zero clutter',
       'Architectural mono-floral installations (single-variety calla lilies in sculptural ceramic)',
@@ -393,7 +605,12 @@ export function generateOfflineMoodboard(brief: Brief, extra?: string): Moodboar
       'Minimalist polished platinum or white gold cufflinks and fine jewellery',
       'Sleek modern hair styling and understated neutral makeup',
     ]
-    playlistVibes = ['Contemporary neo-classical strings', 'Lounge deep house and downtempo chic', 'Sophisticated jazz trios', 'French electro-lounge grooves']
+    playlistVibes = [
+      'Contemporary neo-classical strings',
+      'Lounge deep house and downtempo chic',
+      'Sophisticated jazz trios',
+      'French electro-lounge grooves',
+    ]
   } else if (/(neon|carnival|festive|bollywood|vibrant|colourful|colorful|joyful|party)/.test(text)) {
     palette = [
       { name: 'Vibrant Saffron', hex: '#ff9933', role: 'Electric Spark' },
@@ -407,7 +624,13 @@ export function generateOfflineMoodboard(brief: Brief, extra?: string): Moodboar
       body: 'Plus Jakarta Sans',
       vibe: 'High-Energy Festive Maximalism',
     }
-    motifs = ['Marigold Toran Swags', 'Kaleidoscopic Geometric Mandalas', 'Neon Script Signs', 'Kite Silhouettes', 'Bangle Pyramids']
+    motifs = [
+      'Marigold Toran Swags',
+      'Kaleidoscopic Geometric Mandalas',
+      'Neon Script Signs',
+      'Kite Silhouettes',
+      'Bangle Pyramids',
+    ]
     decor = [
       'Colour-blocked canopy tents with hot pink and tangerine silk ceilings',
       'Overhead marigold curtain waterfalls and suspended brass birdcages',
@@ -420,7 +643,12 @@ export function generateOfflineMoodboard(brief: Brief, extra?: string): Moodboar
       'Stackable lac bangles, oversized jhumkas, and playful sunglasses for day events',
       'Festive juttis embroidered with colorful threads and sequins',
     ]
-    playlistVibes = ['High-energy Bollywood brass band', 'Bhangra and dhol live fusion', 'Tropical celebratory pop remakes', 'Upbeat retro disco party classics']
+    playlistVibes = [
+      'High-energy Bollywood brass band',
+      'Bhangra and dhol live fusion',
+      'Tropical celebratory pop remakes',
+      'Upbeat retro disco party classics',
+    ]
   } else if (type === 'wedding') {
     palette = [
       { name: 'Royal Crimson', hex: '#7a1926', role: 'Heritage Anchor' },
@@ -434,7 +662,13 @@ export function generateOfflineMoodboard(brief: Brief, extra?: string): Moodboar
       body: 'Plus Jakarta Sans',
       vibe: 'Timeless Nuptial Heritage & Warmth',
     }
-    motifs = ['Interlocking Floral Mandalas', 'Gilded Paisleys', 'Lotus Blossom Crests', 'Vintage Chandelier Drops', 'Sacred Geometric Borders']
+    motifs = [
+      'Interlocking Floral Mandalas',
+      'Gilded Paisleys',
+      'Lotus Blossom Crests',
+      'Vintage Chandelier Drops',
+      'Sacred Geometric Borders',
+    ]
     decor = [
       'A circular mandap or ceremony gazebo wrapped in white rajnigandha and red roses',
       'Brass urli vessels filled with fragrant marigold heads and floating scented tea lights',
@@ -447,7 +681,12 @@ export function generateOfflineMoodboard(brief: Brief, extra?: string): Moodboar
       'Coordinated pastel ensembles for close family and wedding party',
       'Fine Polki, uncut diamond, or heirloom emerald jewelry',
     ]
-    playlistVibes = ['Ceremonial sitar and shehnai melodies', 'Slow acoustic love ballads', 'Sangeet dance-floor anthems', 'Orchestral processional arrangements']
+    playlistVibes = [
+      'Ceremonial sitar and shehnai melodies',
+      'Slow acoustic love ballads',
+      'Sangeet dance-floor anthems',
+      'Orchestral processional arrangements',
+    ]
   } else if (type === 'birthday') {
     palette = [
       { name: 'Midnight Navy', hex: '#1c2841', role: 'Celebratory Foundation' },
@@ -461,7 +700,13 @@ export function generateOfflineMoodboard(brief: Brief, extra?: string): Moodboar
       body: 'Outfit',
       vibe: 'Effortless Modern Milestone Glamour',
     }
-    motifs = ['Constellation Sparkles', 'Geometric Balloon Arches', 'Art Deco Radial Arcs', 'Ribbon Confetti', 'Champagne Coupe Silhouettes']
+    motifs = [
+      'Constellation Sparkles',
+      'Geometric Balloon Arches',
+      'Art Deco Radial Arcs',
+      'Ribbon Confetti',
+      'Champagne Coupe Silhouettes',
+    ]
     decor = [
       'Bespoke multi-toned balloon and floral garland backdrop with customized neon milestone number',
       'Sleek acrylic dessert plinths with a centerpiece tiered designer cake',
@@ -474,7 +719,12 @@ export function generateOfflineMoodboard(brief: Brief, extra?: string): Moodboar
       'Celebratory signature accessory (statement earrings, metallic watch, or sleek heels)',
       'Smart casual chic dress code for guests with touch of sparkle',
     ]
-    playlistVibes = ['Soulful modern funk and disco revival', 'Top 40 acoustic lounge covers', 'Upbeat milestone party anthems', 'Warm cocktail hour jazz']
+    playlistVibes = [
+      'Soulful modern funk and disco revival',
+      'Top 40 acoustic lounge covers',
+      'Upbeat milestone party anthems',
+      'Warm cocktail hour jazz',
+    ]
   } else {
     palette = [
       { name: 'Heritage Indigo', hex: '#263b5e', role: 'Community Foundation' },
@@ -488,7 +738,13 @@ export function generateOfflineMoodboard(brief: Brief, extra?: string): Moodboar
       body: 'Inter',
       vibe: 'Warm Civic Fellowship & Inclusivity',
     }
-    motifs = ['Interlocking Ring Circles', 'Sunburst Community Rays', 'Botanical Leaf Sprigs', 'Festive Bunting Garlands', 'Hands in Unity Crests']
+    motifs = [
+      'Interlocking Ring Circles',
+      'Sunburst Community Rays',
+      'Botanical Leaf Sprigs',
+      'Festive Bunting Garlands',
+      'Hands in Unity Crests',
+    ]
     decor = [
       'Vibrant fabric bunting and festive canopy overhead banners greeting guests',
       'Communal wooden picnic tables with simple clay potted herbal centerpieces',
@@ -501,7 +757,12 @@ export function generateOfflineMoodboard(brief: Brief, extra?: string): Moodboar
       'Comfortable footwear for moving across lawn and community gathering zones',
       'Optional color theme (e.g. "Touch of Yellow" or "Earthy Celebration")',
     ]
-    playlistVibes = ['Upbeat world acoustic folk', 'Acoustic guitar and percussion singalongs', 'Local indie band favorites', 'Warm ambient community celebration background']
+    playlistVibes = [
+      'Upbeat world acoustic folk',
+      'Acoustic guitar and percussion singalongs',
+      'Local indie band favorites',
+      'Warm ambient community celebration background',
+    ]
   }
 
   return {
@@ -572,7 +833,7 @@ export function generateOfflineBudgetRebalance(brief: Brief, budget: BudgetItem[
       // Ensure we don't reduce below spent
       share = Math.min(share, item.from - item.spent)
       item.to = Math.max(item.spent, item.from - share)
-      remainingDeficit -= (item.from - item.to)
+      remainingDeficit -= item.from - item.to
     }
   }
 
@@ -585,14 +846,14 @@ export function generateOfflineBudgetRebalance(brief: Brief, budget: BudgetItem[
   }
 
   // Step 3: Exact sum adjustment to match brief.budget
-  let sumTo = items.reduce((s, i) => s + i.to, 0)
+  const sumTo = items.reduce((s, i) => s + i.to, 0)
   const diff = totalBudget - sumTo
 
   if (diff !== 0) {
     // Find non-contingency item with greatest headroom / allocation to absorb difference
     const adjustable = items
       .filter((i) => !i.contingency && i.to + diff >= i.spent)
-      .sort((a, b) => (b.to - b.spent) - (a.to - a.spent))
+      .sort((a, b) => b.to - b.spent - (a.to - a.spent))
 
     if (adjustable.length > 0) {
       adjustable[0].to += diff
@@ -626,11 +887,10 @@ export function generateOfflineBudgetRebalance(brief: Brief, budget: BudgetItem[
     reason: i.reason,
   }))
 
-  const summary = totalDeficit > 0
-    ? `Rebalanced budget across categories to absorb ${money(totalDeficit, cur)} in overspends from actual bookings, protecting your contingency reserve and ensuring every category covers its verified spending.`
-    : `All celebration categories are currently within their target allocations. Buffer headroom has been balanced to preserve financial security.`
+  const summary =
+    totalDeficit > 0
+      ? `Rebalanced budget across categories to absorb ${money(totalDeficit, cur)} in overspends from actual bookings, protecting your contingency reserve and ensuring every category covers its verified spending.`
+      : `All celebration categories are currently within their target allocations. Buffer headroom has been balanced to preserve financial security.`
 
   return { changes, summary }
 }
-
-const templates = { BUDGET, TIMELINE, VENDORS }

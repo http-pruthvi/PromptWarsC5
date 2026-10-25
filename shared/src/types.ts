@@ -185,5 +185,3 @@ export interface BudgetRebalanceProposal {
   changes: BudgetRebalanceChange[]
   summary: string
 }
-
-

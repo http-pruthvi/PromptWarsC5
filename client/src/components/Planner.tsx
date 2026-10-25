@@ -38,8 +38,8 @@ export default function Planner({ presetType, user, onRequireAuth: _onRequireAut
           setMode('wizard')
         }
       })
-      .catch((err: any) => {
-        if (err?.name === 'AbortError') return
+      .catch((err: unknown) => {
+        if ((err as { name?: string })?.name === 'AbortError') return
         setPlans([])
       })
       .finally(() => {
@@ -92,14 +92,22 @@ export default function Planner({ presetType, user, onRequireAuth: _onRequireAut
       </div>
       <div className="wrap">
         {loadingPlan ? (
-          <div style={{ display: 'grid', placeItems: 'center', minHeight: 320, padding: '80px 0' }} role="status" aria-label="Loading event plan">
+          <div
+            style={{ display: 'grid', placeItems: 'center', minHeight: 320, padding: '80px 0' }}
+            role="status"
+            aria-label="Loading event plan"
+          >
             <LoopingLotus />
             <p style={{ color: 'var(--muted)', marginTop: 14, fontSize: 14 }}>Loading your event portfolio…</p>
           </div>
         ) : (
           <Suspense
             fallback={
-              <div style={{ display: 'grid', placeItems: 'center', minHeight: 320, padding: '80px 0' }} role="status" aria-label="Loading section">
+              <div
+                style={{ display: 'grid', placeItems: 'center', minHeight: 320, padding: '80px 0' }}
+                role="status"
+                aria-label="Loading section"
+              >
                 <LoopingLotus />
                 <p style={{ color: 'var(--muted)', marginTop: 14, fontSize: 14 }}>Preparing celebration…</p>
               </div>
@@ -119,7 +127,10 @@ export default function Planner({ presetType, user, onRequireAuth: _onRequireAut
                     onDone={(p) => {
                       setActivePlan(p)
                       setMode('plan')
-                      api.plans.list().then((r) => setPlans(r.plans)).catch(() => {})
+                      api.plans
+                        .list()
+                        .then((r) => setPlans(r.plans))
+                        .catch(() => {})
                       toast('Your plan is ready ✨')
                     }}
                   />

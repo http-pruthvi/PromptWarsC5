@@ -29,12 +29,13 @@ export default function MoodboardTab({ plan, toast }: Props) {
           setLoading(false)
         }
       })
-      .catch((err: any) => {
+      .catch((err: unknown) => {
         if (active) {
-          if (err?.status === 404) {
+          const apiErr = err as { status?: number; message?: string }
+          if (apiErr?.status === 404) {
             setData(null)
           } else {
-            setError(err?.message || 'Failed to load moodboard')
+            setError(apiErr?.message || 'Failed to load moodboard')
           }
           setLoading(false)
         }
@@ -51,8 +52,9 @@ export default function MoodboardTab({ plan, toast }: Props) {
       const res = await api.plans.generateMoodboard(plan.id, steeringPrompt)
       setData(res)
       toast(steeringPrompt ? 'Moodboard regenerated with your vision!' : 'Moodboard generated successfully!')
-    } catch (err: any) {
-      setError(err?.message || 'Failed to generate moodboard. Please try again.')
+    } catch (err: unknown) {
+      const apiErr = err as { message?: string }
+      setError(apiErr?.message || 'Failed to generate moodboard. Please try again.')
     } finally {
       setGenerating(false)
     }
@@ -82,14 +84,24 @@ export default function MoodboardTab({ plan, toast }: Props) {
   if (!data) {
     return (
       <div className="panel" style={{ textAlign: 'center', padding: '70px 24px' }}>
-        <div style={{ display: 'inline-flex', padding: 20, borderRadius: '50%', background: 'rgba(212,175,55,0.12)', color: 'var(--gold-deep)', marginBottom: 18 }}>
+        <div
+          style={{
+            display: 'inline-flex',
+            padding: 20,
+            borderRadius: '50%',
+            background: 'rgba(212,175,55,0.12)',
+            color: 'var(--gold-deep)',
+            marginBottom: 18,
+          }}
+        >
           <Palette size={44} />
         </div>
         <h3 style={{ fontFamily: 'var(--serif)', fontSize: 36, marginBottom: 10, color: 'var(--plum)' }}>
           No Moodboard Generated Yet
         </h3>
         <p style={{ color: 'var(--muted)', maxWidth: 520, margin: '0 auto 28px', fontSize: 16, lineHeight: 1.5 }}>
-          Explore an editorial 5-color palette, typography pairings, decor textures, and attire inspirations tailored to your {plan.brief.type} celebration.
+          Explore an editorial 5-color palette, typography pairings, decor textures, and attire inspirations tailored to
+          your {plan.brief.type} celebration.
         </p>
         <button
           className="btn btn-primary"
@@ -140,7 +152,16 @@ export default function MoodboardTab({ plan, toast }: Props) {
       </div>
 
       {error && (
-        <div style={{ padding: '12px 18px', background: '#fdf2f2', border: '1px solid #f8d7da', color: '#842029', borderRadius: 12, fontSize: 14 }}>
+        <div
+          style={{
+            padding: '12px 18px',
+            background: '#fdf2f2',
+            border: '1px solid #f8d7da',
+            color: '#842029',
+            borderRadius: 12,
+            fontSize: 14,
+          }}
+        >
           {error}
         </div>
       )}
@@ -194,21 +215,51 @@ export default function MoodboardTab({ plan, toast }: Props) {
             <Type size={16} /> Typography & Calligraphy Pairing
           </div>
           <div style={{ display: 'grid', gap: 12 }}>
-            <div style={{ padding: '14px 16px', borderRadius: 14, background: 'rgba(247,239,229,.6)', border: '1px solid rgba(196,160,90,.2)' }}>
-              <small style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
+            <div
+              style={{
+                padding: '14px 16px',
+                borderRadius: 14,
+                background: 'rgba(247,239,229,.6)',
+                border: '1px solid rgba(196,160,90,.2)',
+              }}
+            >
+              <small
+                style={{
+                  fontSize: 11,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  color: 'var(--muted)',
+                  display: 'block',
+                  marginBottom: 4,
+                }}
+              >
                 Headline Typeface
               </small>
               <div style={{ fontFamily: 'var(--serif)', fontSize: 26, color: 'var(--plum)', fontWeight: 600 }}>
                 {mb.typography.heading}
               </div>
             </div>
-            <div style={{ padding: '14px 16px', borderRadius: 14, background: 'rgba(247,239,229,.6)', border: '1px solid rgba(196,160,90,.2)' }}>
-              <small style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
+            <div
+              style={{
+                padding: '14px 16px',
+                borderRadius: 14,
+                background: 'rgba(247,239,229,.6)',
+                border: '1px solid rgba(196,160,90,.2)',
+              }}
+            >
+              <small
+                style={{
+                  fontSize: 11,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  color: 'var(--muted)',
+                  display: 'block',
+                  marginBottom: 4,
+                }}
+              >
                 Body & Detail Typeface
               </small>
-              <div style={{ fontSize: 16, color: 'var(--ink)', fontWeight: 500 }}>
-                {mb.typography.body}
-              </div>
+              <div style={{ fontSize: 16, color: 'var(--ink)', fontWeight: 500 }}>{mb.typography.body}</div>
             </div>
             <div style={{ fontSize: 13.5, color: 'var(--muted)', fontStyle: 'italic', paddingLeft: 4 }}>
               Vibe: “{mb.typography.vibe}”
@@ -271,7 +322,11 @@ export default function MoodboardTab({ plan, toast }: Props) {
           </div>
           <div className="mb-chips">
             {mb.playlistVibes.map((vib, i) => (
-              <span key={i} className="mb-chip" style={{ background: 'rgba(255,255,255,0.85)', padding: '9px 16px', fontSize: 13.5 }}>
+              <span
+                key={i}
+                className="mb-chip"
+                style={{ background: 'rgba(255,255,255,0.85)', padding: '9px 16px', fontSize: 13.5 }}
+              >
                 <Music size={13} style={{ color: 'var(--gold-deep)' }} />
                 {vib}
               </span>

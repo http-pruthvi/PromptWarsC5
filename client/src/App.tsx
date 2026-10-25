@@ -110,13 +110,7 @@ export default function App() {
       <VectorDefs />
       <ScrollVine />
       <Petals />
-      <Navbar
-        route={route}
-        go={go}
-        user={user}
-        onOpenAuth={() => setShowAuth(true)}
-        onLogout={handleLogout}
-      />
+      <Navbar route={route} go={go} user={user} onOpenAuth={() => setShowAuth(true)} onLogout={handleLogout} />
 
       <Suspense
         fallback={
@@ -156,12 +150,7 @@ export default function App() {
         </AnimatePresence>
 
         <AnimatePresence>
-          {showAuth && (
-            <AuthModal
-              onSuccess={handleAuthSuccess}
-              onClose={() => setShowAuth(false)}
-            />
-          )}
+          {showAuth && <AuthModal onSuccess={handleAuthSuccess} onClose={() => setShowAuth(false)} />}
         </AnimatePresence>
       </Suspense>
 

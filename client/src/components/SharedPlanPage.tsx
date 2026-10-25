@@ -79,7 +79,9 @@ export default function SharedPlanPage({ token, onStartPlanning, onGoHome }: Pro
           <h3 style={{ fontFamily: 'var(--serif)', fontSize: 32, marginTop: 24, color: 'var(--plum)' }}>
             Loading Celebration Plan…
           </h3>
-          <p style={{ color: 'var(--muted)', fontSize: 15 }}>Fetching shared event timeline, vendors, and aesthetic styling.</p>
+          <p style={{ color: 'var(--muted)', fontSize: 15 }}>
+            Fetching shared event timeline, vendors, and aesthetic styling.
+          </p>
         </div>
       </div>
     )
@@ -89,7 +91,16 @@ export default function SharedPlanPage({ token, onStartPlanning, onGoHome }: Pro
     return (
       <div className="planner" style={{ display: 'grid', placeItems: 'center', minHeight: '80vh' }}>
         <div className="panel" style={{ maxWidth: 540, textAlign: 'center', padding: '60px 32px' }}>
-          <div style={{ display: 'inline-flex', padding: 18, borderRadius: '50%', background: 'rgba(212,175,55,0.12)', color: 'var(--gold-deep)', marginBottom: 20 }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              padding: 18,
+              borderRadius: '50%',
+              background: 'rgba(212,175,55,0.12)',
+              color: 'var(--gold-deep)',
+              marginBottom: 20,
+            }}
+          >
             <CalendarDays size={40} />
           </div>
           <h2 style={{ fontFamily: 'var(--serif)', fontSize: 36, marginBottom: 12, color: 'var(--plum)' }}>
@@ -99,15 +110,20 @@ export default function SharedPlanPage({ token, onStartPlanning, onGoHome }: Pro
             This celebration link is private, has been revoked by the host, or does not exist.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button className="btn btn-ghost" onClick={onGoHome}>Return to Home</button>
-            <button className="btn btn-primary" onClick={onStartPlanning}>Start Planning An Event</button>
+            <button className="btn btn-ghost" onClick={onGoHome}>
+              Return to Home
+            </button>
+            <button className="btn btn-primary" onClick={onStartPlanning}>
+              Start Planning An Event
+            </button>
           </div>
         </div>
       </div>
     )
   }
 
-  const typeLabel = { wedding: 'Wedding', birthday: 'Birthday', community: 'Community Event' }[plan.eventType] || 'Celebration'
+  const typeLabel =
+    { wedding: 'Wedding', birthday: 'Birthday', community: 'Community Event' }[plan.eventType] || 'Celebration'
 
   return (
     <div className="planner">
@@ -133,7 +149,14 @@ export default function SharedPlanPage({ token, onStartPlanning, onGoHome }: Pro
             <span className="badge local">Planned with Soirée</span>
           </div>
 
-          <h1 style={{ fontFamily: 'var(--serif)', fontSize: 'clamp(38px, 5.5vw, 64px)', margin: '0 0 16px', color: 'var(--plum)' }}>
+          <h1
+            style={{
+              fontFamily: 'var(--serif)',
+              fontSize: 'clamp(38px, 5.5vw, 64px)',
+              margin: '0 0 16px',
+              color: 'var(--plum)',
+            }}
+          >
             {plan.title || `${typeLabel} Celebration`}
           </h1>
 
@@ -196,8 +219,12 @@ export default function SharedPlanPage({ token, onStartPlanning, onGoHome }: Pro
                 </div>
                 <div style={{ display: 'grid', gap: 8 }}>
                   <div>
-                    <small style={{ color: 'var(--muted)', fontSize: 11, textTransform: 'uppercase' }}>Heading Font</small>
-                    <div style={{ fontFamily: 'var(--serif)', fontSize: 24, color: 'var(--plum)' }}>{plan.moodboard.typography.heading}</div>
+                    <small style={{ color: 'var(--muted)', fontSize: 11, textTransform: 'uppercase' }}>
+                      Heading Font
+                    </small>
+                    <div style={{ fontFamily: 'var(--serif)', fontSize: 24, color: 'var(--plum)' }}>
+                      {plan.moodboard.typography.heading}
+                    </div>
                   </div>
                   <div>
                     <small style={{ color: 'var(--muted)', fontSize: 11, textTransform: 'uppercase' }}>Body Font</small>
@@ -215,7 +242,9 @@ export default function SharedPlanPage({ token, onStartPlanning, onGoHome }: Pro
                 </div>
                 <div className="mb-chips">
                   {plan.moodboard.motifs.map((motif, i) => (
-                    <span key={i} className="mb-chip">✦ {motif}</span>
+                    <span key={i} className="mb-chip">
+                      ✦ {motif}
+                    </span>
                   ))}
                 </div>
               </div>
@@ -239,7 +268,9 @@ export default function SharedPlanPage({ token, onStartPlanning, onGoHome }: Pro
                 </div>
                 <div className="mb-chips">
                   {plan.moodboard.playlistVibes.map((item, i) => (
-                    <span key={i} className="mb-chip">♫ {item}</span>
+                    <span key={i} className="mb-chip">
+                      ♫ {item}
+                    </span>
                   ))}
                 </div>
               </div>
@@ -310,14 +341,33 @@ export default function SharedPlanPage({ token, onStartPlanning, onGoHome }: Pro
         )}
 
         {/* Footer CTA Banner: "Planned with Soirée" */}
-        <div className="panel" style={{ textAlign: 'center', padding: '48px 24px', background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.95), rgba(247,239,229,0.75))' }}>
-          <h3 style={{ fontFamily: 'var(--serif)', fontSize: 'clamp(28px, 3.5vw, 42px)', marginBottom: 12, color: 'var(--plum)' }}>
+        <div
+          className="panel"
+          style={{
+            textAlign: 'center',
+            padding: '48px 24px',
+            background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.95), rgba(247,239,229,0.75))',
+          }}
+        >
+          <h3
+            style={{
+              fontFamily: 'var(--serif)',
+              fontSize: 'clamp(28px, 3.5vw, 42px)',
+              marginBottom: 12,
+              color: 'var(--plum)',
+            }}
+          >
             Planned with Soirée
           </h3>
           <p style={{ color: 'var(--muted)', fontSize: 16, maxWidth: 500, margin: '0 auto 24px' }}>
-            Transform your wedding, milestone birthday, or community gathering into an impeccably orchestrated celebration with intelligent planning and bespoke aesthetics.
+            Transform your wedding, milestone birthday, or community gathering into an impeccably orchestrated
+            celebration with intelligent planning and bespoke aesthetics.
           </p>
-          <button className="btn btn-primary" onClick={onStartPlanning} style={{ padding: '14px 28px', fontSize: 15, gap: 8 }}>
+          <button
+            className="btn btn-primary"
+            onClick={onStartPlanning}
+            style={{ padding: '14px 28px', fontSize: 15, gap: 8 }}
+          >
             Start Planning Your Celebration ✨
           </button>
         </div>

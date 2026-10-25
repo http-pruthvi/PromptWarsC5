@@ -132,8 +132,8 @@ export default function GuestsTab({ plan, toast }: Props) {
         setGuests(gRes.guests)
         setSummary(sRes.summary)
       })
-      .catch((err: any) => {
-        if (err?.name === 'AbortError') return
+      .catch((err: unknown) => {
+        if ((err as { name?: string })?.name === 'AbortError') return
         toast('Failed to load guests')
       })
       .finally(() => {
@@ -148,58 +148,41 @@ export default function GuestsTab({ plan, toast }: Props) {
     }
   }, [plan.id, toast])
 
-  const recalculateSummary = useCallback((list: Guest[]): GuestSummary => {
-    const countsByStatus = { pending: 0, attending: 0, declined: 0 }
-    const countsByDietary = { none: 0, veg: 0, vegan: 0, jain: 0, halal: 0, other: 0 }
-    let confirmedHeadcount = 0
+  const recalculateSummary = useCallback(
+    (list: Guest[]): GuestSummary => {
+      const countsByStatus = { pending: 0, attending: 0, declined: 0 }
+      const countsByDietary = { none: 0, veg: 0, vegan: 0, jain: 0, halal: 0, other: 0 }
+      let confirmedHeadcount = 0
 
-    for (const g of list) {
-      if (countsByStatus[g.status] !== undefined) countsByStatus[g.status]++
-      if (countsByDietary[g.dietary] !== undefined) countsByDietary[g.dietary]++
-      if (g.status === 'attending') confirmedHeadcount += g.party
-    }
+      for (const g of list) {
+        if (countsByStatus[g.status] !== undefined) countsByStatus[g.status]++
+        if (countsByDietary[g.dietary] !== undefined) countsByDietary[g.dietary]++
+        if (g.status === 'attending') confirmedHeadcount += g.party
+      }
 
-    const cateringAlloc = summary?.cateringAllocation ?? 0
-    const costPerHead = confirmedHeadcount > 0 ? Math.round(cateringAlloc / confirmedHeadcount) : null
+      const cateringAlloc = summary?.cateringAllocation ?? 0
+      const costPerHead = confirmedHeadcount > 0 ? Math.round(cateringAlloc / confirmedHeadcount) : null
 
-    return {
-      totalGuests: list.length,
-      confirmedHeadcount,
-      countsByStatus,
-      countsByDietary,
-      cateringAllocation: cateringAlloc,
-      costPerHead,
-    }
-  }, [summary?.cateringAllocation])
+      return {
+        totalGuests: list.length,
+        confirmedHeadcount,
+        countsByStatus,
+        countsByDietary,
+        cateringAllocation: cateringAlloc,
+        costPerHead,
+      }
+    },
+    [summary?.cateringAllocation],
+  )
 
-  const onUpdateImmediate = useCallback(async (id: string, patch: Partial<Guest>) => {
-    const prevGuests = guests
-    const prevSummary = summary
-    const updated = guests.map((g) => (g.id === id ? { ...g, ...patch } : g))
-    setGuests(updated)
-    setSummary(recalculateSummary(updated))
+  const onUpdateImmediate = useCallback(
+    async (id: string, patch: Partial<Guest>) => {
+      const prevGuests = guests
+      const prevSummary = summary
+      const updated = guests.map((g) => (g.id === id ? { ...g, ...patch } : g))
+      setGuests(updated)
+      setSummary(recalculateSummary(updated))
 
-    try {
-      await api.plans.updateGuest(plan.id, id, patch)
-    } catch {
-      setGuests(prevGuests)
-      setSummary(prevSummary)
-      toast('Failed to update guest. Changes reverted.')
-    }
-  }, [guests, plan.id, recalculateSummary, summary, toast])
-
-  const onUpdateText = useCallback((id: string, patch: Partial<Guest>) => {
-    const prevGuests = guests
-    const prevSummary = summary
-    const updated = guests.map((g) => (g.id === id ? { ...g, ...patch } : g))
-    setGuests(updated)
-    setSummary(recalculateSummary(updated))
-
-    if (debounceTimers.current[id]) {
-      window.clearTimeout(debounceTimers.current[id])
-    }
-
-    debounceTimers.current[id] = window.setTimeout(async () => {
       try {
         await api.plans.updateGuest(plan.id, id, patch)
       } catch {
@@ -207,25 +190,54 @@ export default function GuestsTab({ plan, toast }: Props) {
         setSummary(prevSummary)
         toast('Failed to update guest. Changes reverted.')
       }
-    }, 400)
-  }, [guests, plan.id, recalculateSummary, summary, toast])
+    },
+    [guests, plan.id, recalculateSummary, summary, toast],
+  )
 
-  const delGuest = useCallback(async (id: string) => {
-    const prevGuests = guests
-    const prevSummary = summary
-    const updated = guests.filter((g) => g.id !== id)
-    setGuests(updated)
-    setSummary(recalculateSummary(updated))
+  const onUpdateText = useCallback(
+    (id: string, patch: Partial<Guest>) => {
+      const prevGuests = guests
+      const prevSummary = summary
+      const updated = guests.map((g) => (g.id === id ? { ...g, ...patch } : g))
+      setGuests(updated)
+      setSummary(recalculateSummary(updated))
 
-    try {
-      await api.plans.deleteGuest(plan.id, id)
-      toast('Guest removed')
-    } catch {
-      setGuests(prevGuests)
-      setSummary(prevSummary)
-      toast('Failed to delete guest. Changes reverted.')
-    }
-  }, [guests, plan.id, recalculateSummary, summary, toast])
+      if (debounceTimers.current[id]) {
+        window.clearTimeout(debounceTimers.current[id])
+      }
+
+      debounceTimers.current[id] = window.setTimeout(async () => {
+        try {
+          await api.plans.updateGuest(plan.id, id, patch)
+        } catch {
+          setGuests(prevGuests)
+          setSummary(prevSummary)
+          toast('Failed to update guest. Changes reverted.')
+        }
+      }, 400)
+    },
+    [guests, plan.id, recalculateSummary, summary, toast],
+  )
+
+  const delGuest = useCallback(
+    async (id: string) => {
+      const prevGuests = guests
+      const prevSummary = summary
+      const updated = guests.filter((g) => g.id !== id)
+      setGuests(updated)
+      setSummary(recalculateSummary(updated))
+
+      try {
+        await api.plans.deleteGuest(plan.id, id)
+        toast('Guest removed')
+      } catch {
+        setGuests(prevGuests)
+        setSummary(prevSummary)
+        toast('Failed to delete guest. Changes reverted.')
+      }
+    },
+    [guests, plan.id, recalculateSummary, summary, toast],
+  )
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -266,8 +278,8 @@ export default function GuestsTab({ plan, toast }: Props) {
       setShowImportModal(false)
       setImportText('')
       toast(`Imported ${res.count} guests`)
-    } catch (e: any) {
-      toast(e?.message || 'Failed to import guests')
+    } catch (e: unknown) {
+      toast((e as { message?: string })?.message || 'Failed to import guests')
     } finally {
       setImporting(false)
     }
@@ -325,7 +337,8 @@ export default function GuestsTab({ plan, toast }: Props) {
             <strong>Headcount Alert: Capacity Exceeded</strong>
             <p>
               Your confirmed guest count ({confirmedCount}) exceeds your planned venue capacity of {plannedCapacity} by{' '}
-              {confirmedCount - plannedCapacity} {confirmedCount - plannedCapacity === 1 ? 'attendee' : 'attendees'}. Check your seating plan and catering buffers.
+              {confirmedCount - plannedCapacity} {confirmedCount - plannedCapacity === 1 ? 'attendee' : 'attendees'}.
+              Check your seating plan and catering buffers.
             </p>
           </div>
         </div>
@@ -339,21 +352,13 @@ export default function GuestsTab({ plan, toast }: Props) {
           pct={plannedCapacity ? (confirmedCount / plannedCapacity) * 100 : 0}
           sub={`${summary?.countsByStatus.attending ?? 0} parties attending (target: ${plannedCapacity})`}
         />
-        <Stat
-          label="Pending RSVPs"
-          value={`${summary?.countsByStatus.pending ?? 0}`}
-          pct={0}
-          sub="awaiting response"
-        />
-        <Stat
-          label="Declined"
-          value={`${summary?.countsByStatus.declined ?? 0}`}
-          pct={0}
-          sub="unable to attend"
-        />
+        <Stat label="Pending RSVPs" value={`${summary?.countsByStatus.pending ?? 0}`} pct={0} sub="awaiting response" />
+        <Stat label="Declined" value={`${summary?.countsByStatus.declined ?? 0}`} pct={0} sub="unable to attend" />
         <Stat
           label="Catering / Head"
-          value={summary?.costPerHead !== null && summary?.costPerHead !== undefined ? money(summary.costPerHead, cur) : '—'}
+          value={
+            summary?.costPerHead !== null && summary?.costPerHead !== undefined ? money(summary.costPerHead, cur) : '—'
+          }
           pct={0}
           sub={
             summary?.costPerHead !== null && summary?.costPerHead !== undefined
@@ -383,20 +388,50 @@ export default function GuestsTab({ plan, toast }: Props) {
               border: '1px solid var(--line)',
             }}
           >
-            <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--gold-deep)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <span
+              style={{
+                fontSize: 12.5,
+                fontWeight: 600,
+                color: 'var(--gold-deep)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+              }}
+            >
               Dietary Preferences:
             </span>
-            {summary.countsByDietary.veg > 0 && <span className="mb-chip" style={{ padding: '4px 10px', fontSize: 12 }}>{summary.countsByDietary.veg} Vegetarian</span>}
-            {summary.countsByDietary.vegan > 0 && <span className="mb-chip" style={{ padding: '4px 10px', fontSize: 12 }}>{summary.countsByDietary.vegan} Vegan</span>}
-            {summary.countsByDietary.jain > 0 && <span className="mb-chip" style={{ padding: '4px 10px', fontSize: 12 }}>{summary.countsByDietary.jain} Jain</span>}
-            {summary.countsByDietary.halal > 0 && <span className="mb-chip" style={{ padding: '4px 10px', fontSize: 12 }}>{summary.countsByDietary.halal} Halal</span>}
-            {summary.countsByDietary.other > 0 && <span className="mb-chip" style={{ padding: '4px 10px', fontSize: 12 }}>{summary.countsByDietary.other} Other / Special</span>}
+            {summary.countsByDietary.veg > 0 && (
+              <span className="mb-chip" style={{ padding: '4px 10px', fontSize: 12 }}>
+                {summary.countsByDietary.veg} Vegetarian
+              </span>
+            )}
+            {summary.countsByDietary.vegan > 0 && (
+              <span className="mb-chip" style={{ padding: '4px 10px', fontSize: 12 }}>
+                {summary.countsByDietary.vegan} Vegan
+              </span>
+            )}
+            {summary.countsByDietary.jain > 0 && (
+              <span className="mb-chip" style={{ padding: '4px 10px', fontSize: 12 }}>
+                {summary.countsByDietary.jain} Jain
+              </span>
+            )}
+            {summary.countsByDietary.halal > 0 && (
+              <span className="mb-chip" style={{ padding: '4px 10px', fontSize: 12 }}>
+                {summary.countsByDietary.halal} Halal
+              </span>
+            )}
+            {summary.countsByDietary.other > 0 && (
+              <span className="mb-chip" style={{ padding: '4px 10px', fontSize: 12 }}>
+                {summary.countsByDietary.other} Other / Special
+              </span>
+            )}
           </div>
         )}
 
       {/* Add Guest Form */}
       <div className="add-guest-card">
-        <h4 style={{ fontFamily: 'var(--serif)', fontSize: 20, marginBottom: 12, color: 'var(--ink)' }}>Add New Guest</h4>
+        <h4 style={{ fontFamily: 'var(--serif)', fontSize: 20, marginBottom: 12, color: 'var(--ink)' }}>
+          Add New Guest
+        </h4>
         <form className="add-guest-form" onSubmit={handleAdd}>
           <input
             className="add-guest-input"
@@ -453,7 +488,12 @@ export default function GuestsTab({ plan, toast }: Props) {
             aria-label="Guest notes"
             disabled={adding}
           />
-          <button type="submit" className="btn btn-gold" disabled={adding || !newName.trim()} style={{ padding: '8px 18px', fontSize: 13 }}>
+          <button
+            type="submit"
+            className="btn btn-gold"
+            disabled={adding || !newName.trim()}
+            style={{ padding: '8px 18px', fontSize: 13 }}
+          >
             <UserPlus size={15} /> <span>Add</span>
           </button>
         </form>
@@ -476,7 +516,7 @@ export default function GuestsTab({ plan, toast }: Props) {
           <select
             className="guest-select"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
+            onChange={(e) => setStatusFilter(e.target.value as 'all' | GuestStatus)}
             aria-label="Filter by RSVP status"
           >
             <option value="all">All RSVP Statuses</option>
@@ -488,7 +528,7 @@ export default function GuestsTab({ plan, toast }: Props) {
           <select
             className="guest-select"
             value={dietaryFilter}
-            onChange={(e) => setDietaryFilter(e.target.value as any)}
+            onChange={(e) => setDietaryFilter(e.target.value as 'all' | DietaryOption)}
             aria-label="Filter by dietary requirement"
           >
             <option value="all">All Dietary Types</option>
@@ -557,11 +597,7 @@ export default function GuestsTab({ plan, toast }: Props) {
       {/* Bulk Import Modal */}
       <AnimatePresence>
         {showImportModal && (
-          <div
-            className="auth-overlay"
-            onClick={() => setShowImportModal(false)}
-            role="presentation"
-          >
+          <div className="auth-overlay" onClick={() => setShowImportModal(false)} role="presentation">
             <motion.div
               className="auth-card"
               style={{ maxWidth: 520, width: '92%' }}
@@ -573,16 +609,19 @@ export default function GuestsTab({ plan, toast }: Props) {
               aria-modal="true"
               aria-labelledby="import-modal-title"
             >
-              <button
-                className="auth-close"
-                onClick={() => setShowImportModal(false)}
-                aria-label="Close import dialog"
-              >
+              <button className="auth-close" onClick={() => setShowImportModal(false)} aria-label="Close import dialog">
                 <X size={20} />
               </button>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                <div style={{ padding: 10, borderRadius: '50%', background: 'rgba(212,175,55,0.15)', color: 'var(--gold-deep)' }}>
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: '50%',
+                    background: 'rgba(212,175,55,0.15)',
+                    color: 'var(--gold-deep)',
+                  }}
+                >
                   <Upload size={22} />
                 </div>
                 <div>
@@ -616,7 +655,9 @@ export default function GuestsTab({ plan, toast }: Props) {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 13, color: 'var(--muted)' }}>
-                  {importLineCount > 0 ? `${importLineCount} guest ${importLineCount === 1 ? 'name' : 'names'} detected` : 'Waiting for pasted names...'}
+                  {importLineCount > 0
+                    ? `${importLineCount} guest ${importLineCount === 1 ? 'name' : 'names'} detected`
+                    : 'Waiting for pasted names...'}
                 </span>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button
@@ -627,11 +668,7 @@ export default function GuestsTab({ plan, toast }: Props) {
                   >
                     Cancel
                   </button>
-                  <button
-                    className="btn btn-gold"
-                    onClick={handleImport}
-                    disabled={importing || importLineCount === 0}
-                  >
+                  <button className="btn btn-gold" onClick={handleImport} disabled={importing || importLineCount === 0}>
                     {importing ? 'Importing...' : `Import ${importLineCount || ''} Guests`}
                   </button>
                 </div>

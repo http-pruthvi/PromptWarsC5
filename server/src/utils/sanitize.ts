@@ -29,7 +29,7 @@ export function escapeHtml(str: string): string {
 export function sanitizeText(input: string): string {
   if (!input || typeof input !== 'string') return ''
 
-  let text = input
+  const text = input
     // Remove script / style / iframe blocks and contents
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')

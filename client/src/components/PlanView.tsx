@@ -1,15 +1,13 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import {
-  CalendarDays, Copy, Download, LayoutDashboard, LayoutGrid, MapPin, MessageCircleHeart,
-  Palette, PiggyBank, Plus, Printer, Share2, ShieldCheck, Store, Users, X, Lightbulb,
-} from 'lucide-react'
+import { CalendarDays, LayoutGrid, Lightbulb, MessageCircleHeart, Palette, PiggyBank, Store, Users } from 'lucide-react'
 import React, { Suspense, useEffect, useRef, useState } from 'react'
-import { api } from '../lib/api'
-import { compactMoney, fmtDate, money } from '../lib/utils'
 import type { Plan } from '@soiree/shared'
-import { DonutChart } from './common'
+import { api } from '../lib/api'
 import { LoopingLotus } from './Vectors'
-import { MilestoneRow, Stat } from './tabs/TabHelpers'
+import { MilestoneRow } from './tabs/TabHelpers'
+import { PlanHeader } from './plan/PlanHeader'
+import { PlanOverviewTab } from './plan/PlanOverviewTab'
+import { ShareModal } from './plan/ShareModal'
 
 const BudgetTab = React.lazy(() => import('./tabs/BudgetTab'))
 const VendorsTab = React.lazy(() => import('./tabs/VendorsTab'))
@@ -41,14 +39,8 @@ interface Props {
 
 export default function PlanView({ plan, setPlan, onNew, onBackToDashboard, toast }: Props) {
   const [tab, setTab] = useState<Tab>('overview')
-  const b = plan.brief
-  const cur = b.currency
   const totalAlloc = plan.budget.reduce((s, x) => s + x.allocated, 0)
   const totalSpent = plan.budget.reduce((s, x) => s + x.spent, 0)
-  const done = plan.timeline.filter((t) => t.done).length
-  const booked = plan.vendors.filter((v) => v.status === 'booked').length
-  const daysLeft = Math.max(0, Math.ceil((new Date(b.date + 'T00:00:00').getTime() - Date.now()) / 86400000))
-  const typeLabel = { wedding: 'Wedding', birthday: 'Birthday', community: 'Community event' }[b.type]
 
   const [showShareModal, setShowShareModal] = useState(false)
   const [shareData, setShareData] = useState<{ shareToken: string | null; shareEnabled: boolean } | null>(null)
@@ -160,60 +152,13 @@ export default function PlanView({ plan, setPlan, onNew, onBackToDashboard, toas
 
   return (
     <div>
-      <div className="plan-head">
-        <div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={onBackToDashboard}
-              style={{ padding: '4px 8px', fontSize: 12 }}
-            >
-              <LayoutDashboard size={13} /> All plans
-            </button>
-            <span className="badge">{typeLabel}</span>
-            <span className={`badge ${plan.generatedBy === 'local' ? 'local' : ''}`}>
-              {plan.generatedBy === 'gemini' ? 'Gemini AI' : 'Smart planner'}
-            </span>
-          </div>
-
-          <h2 style={{ marginTop: 10 }}>{b.title || `Your ${typeLabel.toLowerCase()}`}</h2>
-          <div className="plan-meta">
-            <span className="meta">
-              <CalendarDays size={15} />
-              {fmtDate(new Date(b.date + 'T00:00:00'))} · {daysLeft} days to go
-            </span>
-            <span className="meta">
-              <Users size={15} />
-              {b.guests} guests
-            </span>
-            {b.city && (
-              <span className="meta">
-                <MapPin size={15} />
-                {b.city}
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="plan-actions">
-          <button className="btn btn-secondary btn-sm" onClick={openShareModal} style={{ gap: 6 }}>
-            <Share2 size={15} /> Share
-          </button>
-          <a
-            className="btn btn-ghost btn-sm"
-            href={api.plans.getIcsUrl(plan.id)}
-            download={`soiree-${plan.id}.ics`}
-            onClick={() => toast('Calendar downloaded')}
-          >
-            <Download size={15} /> Calendar (.ics)
-          </a>
-          <button className="btn btn-ghost btn-sm" onClick={() => window.print()}>
-            <Printer size={15} /> Print
-          </button>
-          <button className="btn btn-primary btn-sm" onClick={onNew}>
-            <Plus size={15} /> New plan
-          </button>
-        </div>
-      </div>
+      <PlanHeader
+        plan={plan}
+        onNew={onNew}
+        onBackToDashboard={onBackToDashboard}
+        openShareModal={openShareModal}
+        toast={toast}
+      />
 
       <div className="tabs" role="tablist">
         {TABS.map((t) => (
@@ -225,7 +170,11 @@ export default function PlanView({ plan, setPlan, onNew, onBackToDashboard, toas
             onClick={() => setTab(t.id)}
           >
             {tab === t.id && (
-              <motion.span layoutId="tabpill" className="pill" transition={{ type: 'spring', stiffness: 380, damping: 32 }} />
+              <motion.span
+                layoutId="tabpill"
+                className="pill"
+                transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+              />
             )}
             <t.icon size={15} /> <span>{t.label}</span>
           </button>
@@ -241,178 +190,67 @@ export default function PlanView({ plan, setPlan, onNew, onBackToDashboard, toas
           transition={{ duration: 0.35 }}
         >
           {tab === 'overview' && (
-            <>
-              <p className="summary">{plan.summary}</p>
-              <div className="stat-row">
-                <Stat label="Budget" value={compactMoney(b.budget, cur)} pct={(totalSpent / b.budget) * 100} sub={`${money(totalSpent, cur)} spent`} />
-                <Stat label="Milestones" value={`${done}/${plan.timeline.length}`} pct={(done / plan.timeline.length) * 100} sub="tasks complete" />
-                <Stat label="Vendors" value={`${booked}/${plan.vendors.length}`} pct={(booked / plan.vendors.length) * 100} sub="booked" />
-                <Stat label="Per guest" value={compactMoney(b.guests ? b.budget / b.guests : 0, cur)} pct={0} sub="budget per head" />
-              </div>
-              <div className="budget-layout">
-                <DonutChart data={plan.budget.map((x) => ({ label: x.category, value: x.allocated }))} centerLabel="Allocated" centerValue={compactMoney(totalAlloc, cur)} />
-                <div>
-                  <h3 style={{ fontFamily: 'var(--serif)', fontSize: 30, marginBottom: 14 }}>Up next</h3>
-                  <div className="timeline">
-                    {plan.timeline.filter((t) => !t.done).slice(0, 3).map((m) => (
-                      <MilestoneRow key={m.id} plan={plan} id={m.id} onToggle={toggleMilestone} />
-                    ))}
-                    {plan.timeline.every((t) => t.done) && <p className="m-detail">Everything is done. Enjoy your celebration! 🎉</p>}
-                  </div>
-                </div>
-              </div>
-            </>
+            <PlanOverviewTab
+              plan={plan}
+              totalAlloc={totalAlloc}
+              totalSpent={totalSpent}
+              toggleMilestone={toggleMilestone}
+            />
           )}
 
           <div className="tab-content-area">
             <Suspense
               fallback={
-                <div style={{ display: 'grid', placeItems: 'center', minHeight: 520, padding: 30 }} role="status" aria-label="Loading section">
+                <div
+                  style={{ display: 'grid', placeItems: 'center', minHeight: 520, padding: 30 }}
+                  role="status"
+                  aria-label="Loading section"
+                >
                   <LoopingLotus size={120} />
                 </div>
               }
             >
-            {tab === 'budget' && (
-              <BudgetTab
-                plan={plan}
-                setPlan={setPlan}
-                totalAlloc={totalAlloc}
-                totalSpent={totalSpent}
-                onEdit={editBudget}
-                toast={toast}
-              />
-            )}
+              {tab === 'budget' && (
+                <BudgetTab
+                  plan={plan}
+                  setPlan={setPlan}
+                  totalAlloc={totalAlloc}
+                  totalSpent={totalSpent}
+                  onEdit={editBudget}
+                  toast={toast}
+                />
+              )}
 
-            {tab === 'timeline' && (
-              <div className="timeline">
-                {plan.timeline.map((m) => (
-                  <MilestoneRow key={m.id} plan={plan} id={m.id} onToggle={toggleMilestone} />
-                ))}
-              </div>
-            )}
+              {tab === 'timeline' && (
+                <div className="timeline">
+                  {plan.timeline.map((m) => (
+                    <MilestoneRow key={m.id} plan={plan} id={m.id} onToggle={toggleMilestone} />
+                  ))}
+                </div>
+              )}
 
-            {tab === 'vendors' && <VendorsTab plan={plan} setPlan={setPlan} toast={toast} />}
+              {tab === 'vendors' && <VendorsTab plan={plan} setPlan={setPlan} toast={toast} />}
 
-            {tab === 'guests' && <GuestsTab plan={plan} toast={toast} />}
+              {tab === 'guests' && <GuestsTab plan={plan} toast={toast} />}
 
-            {tab === 'ideas' && <IdeasTab plan={plan} setPlan={setPlan} toast={toast} />}
+              {tab === 'ideas' && <IdeasTab plan={plan} setPlan={setPlan} toast={toast} />}
 
-            {tab === 'moodboard' && <MoodboardTab plan={plan} toast={toast} />}
+              {tab === 'moodboard' && <MoodboardTab plan={plan} toast={toast} />}
 
-            {tab === 'ask' && <AskTab plan={plan} />}
-          </Suspense>
+              {tab === 'ask' && <AskTab plan={plan} />}
+            </Suspense>
           </div>
         </motion.div>
       </AnimatePresence>
 
-      {/* Shareable Link Modal */}
-      <AnimatePresence>
-        {showShareModal && (
-          <div
-            className="auth-overlay"
-            onClick={() => setShowShareModal(false)}
-            role="presentation"
-          >
-            <motion.div
-              className="auth-card"
-              style={{ maxWidth: 520, width: '92%' }}
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              onClick={(e) => e.stopPropagation()}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="share-modal-title"
-            >
-              <button
-                className="auth-close"
-                onClick={() => setShowShareModal(false)}
-                aria-label="Close share dialog"
-              >
-                <X size={20} />
-              </button>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                <div style={{ padding: 10, borderRadius: '50%', background: 'rgba(212,175,55,0.15)', color: 'var(--gold-deep)' }}>
-                  <Share2 size={22} />
-                </div>
-                <h3 id="share-modal-title" style={{ fontFamily: 'var(--serif)', fontSize: 28, margin: 0 }}>
-                  Share Celebration Plan
-                </h3>
-              </div>
-
-              <p style={{ color: 'var(--muted)', fontSize: 14, margin: '0 0 18px', lineHeight: 1.45 }}>
-                Generate an elegant, read-only link to share with loved ones, co-hosts, or vendors.
-              </p>
-
-              {/* What is visible vs confidential */}
-              <div style={{ background: 'rgba(247,239,229,0.7)', border: '1px solid rgba(196,160,90,0.25)', borderRadius: 14, padding: '14px 16px', marginBottom: 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--gold-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-                  <ShieldCheck size={16} /> Privacy & Visibility Notice
-                </div>
-                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: 'var(--ink)', lineHeight: 1.5 }}>
-                  <li>
-                    <b>Visible to viewers:</b> Title, event date, city, celebration overview, milestone timeline, vendor category statuses, creative ideas, and aesthetic moodboard.
-                  </li>
-                  <li style={{ marginTop: 4 }}>
-                    <b>Confidential (Hidden):</b> Exact budget allocations, spend tracking, confidential notes, chat history, and account email.
-                  </li>
-                </ul>
-              </div>
-
-              {/* Link Controls */}
-              <div style={{ display: 'grid', gap: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderRadius: 14, background: '#fff', border: '1px solid var(--line)' }}>
-                  <div>
-                    <span style={{ fontWeight: 600, fontSize: 14, display: 'block' }}>Public Link Access</span>
-                    <small style={{ color: 'var(--muted)', fontSize: 12 }}>
-                      {shareData?.shareEnabled ? 'Link is active and accessible' : 'Link is currently revoked and inactive'}
-                    </small>
-                  </div>
-                  <button
-                    className={`btn btn-sm ${shareData?.shareEnabled ? 'btn-ghost' : 'btn-primary'}`}
-                    onClick={toggleShareEnabled}
-                    disabled={busyShare}
-                    style={{ minWidth: 100 }}
-                  >
-                    {shareData?.shareEnabled ? 'Revoke link' : 'Enable link'}
-                  </button>
-                </div>
-
-                {shareData?.shareEnabled && shareData.shareToken && (
-                  <div style={{ display: 'grid', gap: 8 }}>
-                    <label style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', fontWeight: 600 }}>
-                      Shareable URL
-                    </label>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <input
-                        readOnly
-                        className="input"
-                        value={`${window.location.origin}/#/share/${shareData.shareToken}`}
-                        style={{ fontSize: 13, padding: '10px 14px' }}
-                      />
-                      <button className="btn btn-secondary" onClick={copyShareLink} style={{ gap: 6, whiteSpace: 'nowrap' }}>
-                        <Copy size={15} /> Copy
-                      </button>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
-                      <a
-                        href={`/#/share/${shareData.shareToken}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ fontSize: 12.5, color: 'var(--gold-deep)', textDecoration: 'underline' }}
-                      >
-                        Preview public view ↗
-                      </a>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <ShareModal
+        show={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        shareData={shareData}
+        busyShare={busyShare}
+        toggleShareEnabled={toggleShareEnabled}
+        copyShareLink={copyShareLink}
+      />
     </div>
   )
 }
-

@@ -97,4 +97,3 @@ export function closeDb() {
     dbInstance = null
   }
 }
-

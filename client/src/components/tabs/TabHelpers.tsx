@@ -41,7 +41,13 @@ export function MilestoneRow({ plan, id, onToggle }: { plan: Plan; id: string; o
       </div>
       <div className="m-when">
         <b>{fmtDate(due)}</b>
-        {late ? <span className="late">Overdue</span> : m.weeksBefore === 0 ? 'Event week' : `${m.weeksBefore} wks before`}
+        {late ? (
+          <span className="late">Overdue</span>
+        ) : m.weeksBefore === 0 ? (
+          'Event week'
+        ) : (
+          `${m.weeksBefore} wks before`
+        )}
       </div>
     </div>
   )

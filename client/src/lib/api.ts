@@ -1,9 +1,26 @@
-import type { Brief, BudgetRebalanceProposal, ChatMessage, DietaryOption, Guest, GuestStatus, GuestSummary, IdeaGroup, MoodboardResponse, Plan, PlanSummary, PublicPlanView, ShareResponse, User, Vendor, VendorStatus } from '@soiree/shared'
+import type {
+  Brief,
+  BudgetRebalanceProposal,
+  ChatMessage,
+  DietaryOption,
+  Guest,
+  GuestStatus,
+  GuestSummary,
+  IdeaGroup,
+  MoodboardResponse,
+  Plan,
+  PlanSummary,
+  PublicPlanView,
+  ShareResponse,
+  User,
+  Vendor,
+  VendorStatus,
+} from '@soiree/shared'
 
 export class ApiError extends Error {
   status: number
-  details?: any
-  constructor(message: string, status: number, details?: any) {
+  details?: unknown
+  constructor(message: string, status: number, details?: unknown) {
     super(message)
     this.name = 'ApiError'
     this.status = status
@@ -24,7 +41,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     let errMsg = `Request failed (${res.status})`
-    let details: any
+    let details: unknown
     try {
       const errJson = await res.json()
       errMsg = errJson.error || errMsg
@@ -61,7 +78,8 @@ export const api = {
       }),
   },
   plans: {
-    list: (options?: RequestInit) => request<{ plans: PlanSummary[]; total?: number; limit?: number; offset?: number }>('/api/plans', options),
+    list: (options?: RequestInit) =>
+      request<{ plans: PlanSummary[]; total?: number; limit?: number; offset?: number }>('/api/plans', options),
     get: (id: string, options?: RequestInit) => request<{ plan: Plan }>(`/api/plans/${id}`, options),
     create: (brief: Brief) =>
       request<{ plan: Plan }>('/api/plans', {
@@ -82,7 +100,10 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify(patch),
       }),
-    addVendor: (planId: string, vendor: { category: string; name?: string; status?: VendorStatus; estimate?: number; tips?: string }) =>
+    addVendor: (
+      planId: string,
+      vendor: { category: string; name?: string; status?: VendorStatus; estimate?: number; tips?: string },
+    ) =>
       request<{ vendor: Vendor }>(`/api/plans/${planId}/vendors`, {
         method: 'POST',
         body: JSON.stringify(vendor),
@@ -102,7 +123,10 @@ export const api = {
         body: JSON.stringify({ extra }),
       }),
     getChat: (planId: string, options?: RequestInit) =>
-      request<{ messages: ChatMessage[]; total?: number; limit?: number; offset?: number }>(`/api/plans/${planId}/chat`, options),
+      request<{ messages: ChatMessage[]; total?: number; limit?: number; offset?: number }>(
+        `/api/plans/${planId}/chat`,
+        options,
+      ),
     sendChat: (planId: string, message: string) =>
       request<{ userMessage: ChatMessage; reply: ChatMessage; ai: boolean }>(`/api/plans/${planId}/chat`, {
         method: 'POST',
@@ -116,8 +140,7 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ extra }),
       }),
-    getShare: (planId: string, options?: RequestInit) =>
-      request<ShareResponse>(`/api/plans/${planId}/share`, options),
+    getShare: (planId: string, options?: RequestInit) => request<ShareResponse>(`/api/plans/${planId}/share`, options),
     enableShare: (planId: string) =>
       request<ShareResponse>(`/api/plans/${planId}/share`, {
         method: 'POST',
@@ -127,8 +150,14 @@ export const api = {
         method: 'DELETE',
       }),
     listGuests: (planId: string, options?: RequestInit) =>
-      request<{ guests: Guest[]; total?: number; limit?: number; offset?: number }>(`/api/plans/${planId}/guests`, options),
-    addGuest: (planId: string, guest: { name: string; party?: number; status?: GuestStatus; dietary?: DietaryOption; notes?: string }) =>
+      request<{ guests: Guest[]; total?: number; limit?: number; offset?: number }>(
+        `/api/plans/${planId}/guests`,
+        options,
+      ),
+    addGuest: (
+      planId: string,
+      guest: { name: string; party?: number; status?: GuestStatus; dietary?: DietaryOption; notes?: string },
+    ) =>
       request<{ guest: Guest }>(`/api/plans/${planId}/guests`, {
         method: 'POST',
         body: JSON.stringify(guest),

@@ -64,14 +64,7 @@ const BudgetRow = React.memo(function BudgetRow({ x, color, cur, onEdit }: Budge
   )
 })
 
-export default function BudgetTab({
-  plan,
-  setPlan,
-  totalAlloc,
-  totalSpent,
-  onEdit,
-  toast,
-}: Props) {
+export default function BudgetTab({ plan, setPlan, totalAlloc, totalSpent, onEdit, toast }: Props) {
   const b = plan.brief
   const cur = b.currency
   const diff = b.budget - totalAlloc
@@ -85,7 +78,7 @@ export default function BudgetTab({
         value: x.allocated,
         color: PALETTE[i % PALETTE.length] ?? '#b88c3c',
       })),
-    [plan.budget]
+    [plan.budget],
   )
 
   const [showRebalanceModal, setShowRebalanceModal] = useState(false)
@@ -145,8 +138,8 @@ export default function BudgetTab({
           <div style={{ flex: 1 }}>
             <strong>Budget Alert: {Math.round((totalSpent / b.budget) * 100)}% of total funds utilized</strong>
             <p>
-              You have spent {money(totalSpent, cur)} of your {money(b.budget, cur)} total plan budget.
-              Only {money(remaining, cur)} remains available. Use AI Budget Rebalancing to redistribute funds safely.
+              You have spent {money(totalSpent, cur)} of your {money(b.budget, cur)} total plan budget. Only{' '}
+              {money(remaining, cur)} remains available. Use AI Budget Rebalancing to redistribute funds safely.
             </p>
           </div>
           <button
@@ -163,7 +156,13 @@ export default function BudgetTab({
         <Stat
           label="Total budget"
           value={money(b.budget, cur)}
-          sub={diff === 0 ? 'Fully allocated' : diff > 0 ? `${money(diff, cur)} unallocated` : `${money(-diff, cur)} over-allocated`}
+          sub={
+            diff === 0
+              ? 'Fully allocated'
+              : diff > 0
+                ? `${money(diff, cur)} unallocated`
+                : `${money(-diff, cur)} over-allocated`
+          }
           pct={(totalAlloc / b.budget) * 100}
         />
         <Stat
@@ -196,15 +195,14 @@ export default function BudgetTab({
           </div>
 
           <div className="table">
-            <div className="row row-head"><span /><span>Category</span><span style={{ textAlign: 'right' }}>Allocated</span><span style={{ textAlign: 'right' }}>Spent</span></div>
+            <div className="row row-head">
+              <span />
+              <span>Category</span>
+              <span style={{ textAlign: 'right' }}>Allocated</span>
+              <span style={{ textAlign: 'right' }}>Spent</span>
+            </div>
             {plan.budget.map((x, i) => (
-              <BudgetRow
-                key={x.id}
-                x={x}
-                color={PALETTE[i % PALETTE.length]}
-                cur={cur}
-                onEdit={onEdit}
-              />
+              <BudgetRow key={x.id} x={x} color={PALETTE[i % PALETTE.length]} cur={cur} onEdit={onEdit} />
             ))}
           </div>
         </div>
@@ -213,11 +211,7 @@ export default function BudgetTab({
       {/* AI Budget Rebalance Preview Modal */}
       <AnimatePresence>
         {showRebalanceModal && (
-          <div
-            className="auth-overlay"
-            onClick={() => !applying && setShowRebalanceModal(false)}
-            role="presentation"
-          >
+          <div className="auth-overlay" onClick={() => !applying && setShowRebalanceModal(false)} role="presentation">
             <motion.div
               className="auth-card"
               style={{ maxWidth: 660, width: '94%', maxHeight: '90vh', overflowY: 'auto' }}
@@ -238,7 +232,14 @@ export default function BudgetTab({
               </button>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                <div style={{ padding: 10, borderRadius: '50%', background: 'rgba(212,175,55,0.15)', color: 'var(--gold-deep)' }}>
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: '50%',
+                    background: 'rgba(212,175,55,0.15)',
+                    color: 'var(--gold-deep)',
+                  }}
+                >
                   <Sparkles size={22} />
                 </div>
                 <div>
@@ -260,7 +261,15 @@ export default function BudgetTab({
                 </div>
               ) : proposal ? (
                 <>
-                  <div style={{ background: 'rgba(247,239,229,0.7)', padding: '12px 16px', borderRadius: 14, border: '1px solid var(--line)', marginBottom: 16 }}>
+                  <div
+                    style={{
+                      background: 'rgba(247,239,229,0.7)',
+                      padding: '12px 16px',
+                      borderRadius: 14,
+                      border: '1px solid var(--line)',
+                      marginBottom: 16,
+                    }}
+                  >
                     <p style={{ fontSize: 13.5, fontStyle: 'italic', color: 'var(--ink)', margin: 0, lineHeight: 1.5 }}>
                       "{proposal.summary}"
                     </p>
@@ -284,7 +293,9 @@ export default function BudgetTab({
                             <tr key={c.itemId}>
                               <td style={{ fontWeight: 600 }}>{c.category}</td>
                               <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{money(c.from, cur)}</td>
-                              <td style={{ textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>{money(c.to, cur)}</td>
+                              <td style={{ textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                {money(c.to, cur)}
+                              </td>
                               <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                                 {diff > 0 && <span className="diff-up">+{money(diff, cur)}</span>}
                                 {diff < 0 && <span className="diff-down">{money(diff, cur)}</span>}
@@ -307,11 +318,7 @@ export default function BudgetTab({
                     >
                       Cancel
                     </button>
-                    <button
-                      className="btn btn-gold"
-                      onClick={handleApplyRebalance}
-                      disabled={applying}
-                    >
+                    <button className="btn btn-gold" onClick={handleApplyRebalance} disabled={applying}>
                       {applying ? 'Applying Changes...' : 'Apply Rebalance'}
                     </button>
                   </div>

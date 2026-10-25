@@ -21,13 +21,7 @@ interface VendorCardProps {
   onUpdateText: (id: string, patch: Partial<Vendor>) => void
 }
 
-const VendorCard = React.memo(function VendorCard({
-  v,
-  cur,
-  onToggleStatus,
-  onRemove,
-  onUpdateText,
-}: VendorCardProps) {
+const VendorCard = React.memo(function VendorCard({ v, cur, onToggleStatus, onRemove, onUpdateText }: VendorCardProps) {
   return (
     <motion.div layout className="vendor" key={v.id}>
       <div className="vendor-top">
@@ -40,11 +34,7 @@ const VendorCard = React.memo(function VendorCard({
           >
             {STATUS_LABEL[v.status]}
           </button>
-          <button
-            className="link-btn"
-            aria-label={`Remove ${v.category}`}
-            onClick={() => onRemove(v.id)}
-          >
+          <button className="link-btn" aria-label={`Remove ${v.category}`} onClick={() => onRemove(v.id)}>
             <Trash2 size={15} />
           </button>
         </div>
@@ -84,72 +74,84 @@ export default function VendorsTab({ plan, setPlan, toast }: Props) {
   const debounceTimers = useRef<Record<string, number>>({})
 
   // Debounced server patch for text fields
-  const queuePatch = useCallback((id: string, patch: Partial<Vendor>, orig: Vendor) => {
-    if (debounceTimers.current[id]) {
-      window.clearTimeout(debounceTimers.current[id])
-    }
-    debounceTimers.current[id] = window.setTimeout(async () => {
+  const queuePatch = useCallback(
+    (id: string, patch: Partial<Vendor>, orig: Vendor) => {
+      if (debounceTimers.current[id]) {
+        window.clearTimeout(debounceTimers.current[id])
+      }
+      debounceTimers.current[id] = window.setTimeout(async () => {
+        try {
+          await api.plans.updateVendor(plan.id, id, patch)
+        } catch {
+          setPlan((p) => ({
+            ...p,
+            vendors: p.vendors.map((v) => (v.id === id ? orig : v)),
+          }))
+          toast('Failed to save vendor update')
+        }
+      }, 400)
+    },
+    [plan.id, setPlan, toast],
+  )
+
+  const onUpdateText = useCallback(
+    (id: string, patch: Partial<Vendor>) => {
+      const orig = plan.vendors.find((v) => v.id === id)
+      if (!orig) return
+
+      setPlan((p) => ({
+        ...p,
+        vendors: p.vendors.map((v) => (v.id === id ? { ...v, ...patch } : v)),
+      }))
+      queuePatch(id, patch, orig)
+    },
+    [plan.vendors, queuePatch, setPlan],
+  )
+
+  const onToggleStatus = useCallback(
+    async (id: string, currentStatus: Vendor['status']) => {
+      const orig = plan.vendors.find((v) => v.id === id)
+      if (!orig) return
+      const nextStatus = STATUS_NEXT[currentStatus]
+
+      setPlan((p) => ({
+        ...p,
+        vendors: p.vendors.map((v) => (v.id === id ? { ...v, status: nextStatus } : v)),
+      }))
+
       try {
-        await api.plans.updateVendor(plan.id, id, patch)
+        await api.plans.updateVendor(plan.id, id, { status: nextStatus })
       } catch {
         setPlan((p) => ({
           ...p,
           vendors: p.vendors.map((v) => (v.id === id ? orig : v)),
         }))
-        toast('Failed to save vendor update')
+        toast('Failed to update status')
       }
-    }, 400)
-  }, [plan.id, setPlan, toast])
+    },
+    [plan.id, plan.vendors, setPlan, toast],
+  )
 
-  const onUpdateText = useCallback((id: string, patch: Partial<Vendor>) => {
-    const orig = plan.vendors.find((v) => v.id === id)
-    if (!orig) return
+  const remove = useCallback(
+    async (id: string) => {
+      const orig = plan.vendors.find((v) => v.id === id)
+      if (!orig) return
 
-    setPlan((p) => ({
-      ...p,
-      vendors: p.vendors.map((v) => (v.id === id ? { ...v, ...patch } : v)),
-    }))
-    queuePatch(id, patch, orig)
-  }, [plan.vendors, queuePatch, setPlan])
-
-  const onToggleStatus = useCallback(async (id: string, currentStatus: Vendor['status']) => {
-    const orig = plan.vendors.find((v) => v.id === id)
-    if (!orig) return
-    const nextStatus = STATUS_NEXT[currentStatus]
-
-    setPlan((p) => ({
-      ...p,
-      vendors: p.vendors.map((v) => (v.id === id ? { ...v, status: nextStatus } : v)),
-    }))
-
-    try {
-      await api.plans.updateVendor(plan.id, id, { status: nextStatus })
-    } catch {
       setPlan((p) => ({
         ...p,
-        vendors: p.vendors.map((v) => (v.id === id ? orig : v)),
+        vendors: p.vendors.filter((v) => v.id !== id),
       }))
-      toast('Failed to update status')
-    }
-  }, [plan.id, plan.vendors, setPlan, toast])
 
-  const remove = useCallback(async (id: string) => {
-    const orig = plan.vendors.find((v) => v.id === id)
-    if (!orig) return
-
-    setPlan((p) => ({
-      ...p,
-      vendors: p.vendors.filter((v) => v.id !== id),
-    }))
-
-    try {
-      await api.plans.deleteVendor(plan.id, id)
-      toast('Vendor removed')
-    } catch {
-      setPlan((p) => ({ ...p, vendors: [...p.vendors, orig] }))
-      toast('Failed to delete vendor')
-    }
-  }, [plan.id, plan.vendors, setPlan, toast])
+      try {
+        await api.plans.deleteVendor(plan.id, id)
+        toast('Vendor removed')
+      } catch {
+        setPlan((p) => ({ ...p, vendors: [...p.vendors, orig] }))
+        toast('Failed to delete vendor')
+      }
+    },
+    [plan.id, plan.vendors, setPlan, toast],
+  )
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -170,10 +172,22 @@ export default function VendorsTab({ plan, setPlan, toast }: Props) {
   return (
     <>
       {plan.vendors.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--muted)', background: 'rgba(255,255,255,0.7)', borderRadius: 20, border: '1px solid var(--line)', marginBottom: 20 }}>
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '48px 20px',
+            color: 'var(--muted)',
+            background: 'rgba(255,255,255,0.7)',
+            borderRadius: 20,
+            border: '1px solid var(--line)',
+            marginBottom: 20,
+          }}
+        >
           <Store size={36} style={{ color: 'var(--gold)', margin: '0 auto 12px', opacity: 0.7 }} />
           <p style={{ fontWeight: 600, fontSize: 16, color: 'var(--ink)', marginBottom: 4 }}>No vendors added yet</p>
-          <p style={{ fontSize: 13.5 }}>Add your first vendor category below (e.g. Catering, Photography, Floral Decor).</p>
+          <p style={{ fontSize: 13.5 }}>
+            Add your first vendor category below (e.g. Catering, Photography, Floral Decor).
+          </p>
         </div>
       ) : (
         <div className="vendor-grid">
