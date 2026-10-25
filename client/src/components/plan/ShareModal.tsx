@@ -120,10 +120,13 @@ export function ShareModal({ show, onClose, shareData, busyShare, toggleShareEna
                   </small>
                 </div>
                 <button
-                  className={`btn btn-sm ${shareData?.shareEnabled ? 'btn-ghost' : 'btn-primary'}`}
+                  className={`btn btn-sm ${shareData?.shareEnabled ? 'btn-secondary' : 'btn-primary'}`}
                   onClick={toggleShareEnabled}
                   disabled={busyShare}
-                  style={{ minWidth: 100 }}
+                  style={{
+                    minWidth: 100,
+                    color: shareData?.shareEnabled ? 'var(--ink)' : '#fffaf0',
+                  }}
                 >
                   {shareData?.shareEnabled ? 'Revoke link' : 'Enable link'}
                 </button>
@@ -146,6 +149,7 @@ export function ShareModal({ show, onClose, shareData, busyShare, toggleShareEna
                     <input
                       readOnly
                       className="input"
+                      aria-label="Shareable URL"
                       value={`${window.location.origin}/#/share/${shareData.shareToken}`}
                       style={{ fontSize: 13, padding: '10px 14px' }}
                     />

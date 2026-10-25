@@ -183,7 +183,7 @@ export default function SharedPlanPage({ token, onStartPlanning, onGoHome }: Pro
           <div className="panel" style={{ marginBottom: 26 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
               <Sparkles size={20} style={{ color: 'var(--gold-deep)' }} />
-              <h3 style={{ fontFamily: 'var(--serif)', fontSize: 28, margin: 0 }}>Color Palette & Moodboard</h3>
+              <h2 style={{ fontFamily: 'var(--serif)', fontSize: 28, margin: 0 }}>Color Palette & Moodboard</h2>
             </div>
 
             <div className="swatches-grid" style={{ marginBottom: 24 }}>
@@ -280,7 +280,7 @@ export default function SharedPlanPage({ token, onStartPlanning, onGoHome }: Pro
 
         {/* Timeline Section */}
         <div className="panel" style={{ marginBottom: 26 }}>
-          <h3 style={{ fontFamily: 'var(--serif)', fontSize: 28, marginBottom: 18 }}>Milestone Timeline</h3>
+          <h2 style={{ fontFamily: 'var(--serif)', fontSize: 28, marginBottom: 18 }}>Milestone Timeline</h2>
           <div className="timeline">
             {plan.timeline.map((m) => (
               <div key={m.id} className={`milestone ${m.done ? 'done' : ''}`}>
@@ -303,12 +303,12 @@ export default function SharedPlanPage({ token, onStartPlanning, onGoHome }: Pro
 
         {/* Vendors Section (Categories & Status Only - No Budget Amounts) */}
         <div className="panel" style={{ marginBottom: 26 }}>
-          <h3 style={{ fontFamily: 'var(--serif)', fontSize: 28, marginBottom: 18 }}>Vendor Categories & Status</h3>
+          <h2 style={{ fontFamily: 'var(--serif)', fontSize: 28, marginBottom: 18 }}>Vendor Categories & Status</h2>
           <div className="vendor-grid">
             {plan.vendors.map((v, i) => (
               <div key={i} className="vendor" style={{ padding: 18 }}>
                 <div className="vendor-top">
-                  <h4 style={{ fontSize: 20 }}>{v.category}</h4>
+                  <h3 style={{ fontSize: 20 }}>{v.category}</h3>
                   <span className={`status ${v.status}`}>
                     {v.status === 'booked' ? 'Booked' : v.status === 'contacted' ? 'Contacted' : 'To Contact'}
                   </span>
@@ -321,11 +321,11 @@ export default function SharedPlanPage({ token, onStartPlanning, onGoHome }: Pro
         {/* Ideas Section */}
         {plan.ideas && plan.ideas.length > 0 && (
           <div className="panel" style={{ marginBottom: 36 }}>
-            <h3 style={{ fontFamily: 'var(--serif)', fontSize: 28, marginBottom: 18 }}>Creative Concepts & Ideas</h3>
+            <h2 style={{ fontFamily: 'var(--serif)', fontSize: 28, marginBottom: 18 }}>Creative Concepts & Ideas</h2>
             <div className="idea-grid">
               {plan.ideas.map((g, i) => (
                 <div key={i} className="idea">
-                  <h4 style={{ fontSize: 22 }}>{g.title}</h4>
+                  <h3 style={{ fontSize: 22 }}>{g.title}</h3>
                   <ul className="bullets" style={{ margin: 0, gap: 10 }}>
                     {g.items.map((item, j) => (
                       <li key={j} style={{ fontSize: 14 }}>
@@ -349,7 +349,7 @@ export default function SharedPlanPage({ token, onStartPlanning, onGoHome }: Pro
             background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.95), rgba(247,239,229,0.75))',
           }}
         >
-          <h3
+          <h2
             style={{
               fontFamily: 'var(--serif)',
               fontSize: 'clamp(28px, 3.5vw, 42px)',
@@ -358,7 +358,7 @@ export default function SharedPlanPage({ token, onStartPlanning, onGoHome }: Pro
             }}
           >
             Planned with Soirée
-          </h3>
+          </h2>
           <p style={{ color: 'var(--muted)', fontSize: 16, maxWidth: 500, margin: '0 auto 24px' }}>
             Transform your wedding, milestone birthday, or community gathering into an impeccably orchestrated
             celebration with intelligent planning and bespoke aesthetics.

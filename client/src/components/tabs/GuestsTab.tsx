@@ -429,9 +429,9 @@ export default function GuestsTab({ plan, toast }: Props) {
 
       {/* Add Guest Form */}
       <div className="add-guest-card">
-        <h4 style={{ fontFamily: 'var(--serif)', fontSize: 20, marginBottom: 12, color: 'var(--ink)' }}>
+        <h3 style={{ fontFamily: 'var(--serif)', fontSize: 20, marginBottom: 12, color: 'var(--ink)' }}>
           Add New Guest
-        </h4>
+        </h3>
         <form className="add-guest-form" onSubmit={handleAdd}>
           <input
             className="add-guest-input"

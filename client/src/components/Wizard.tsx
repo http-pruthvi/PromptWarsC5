@@ -131,7 +131,7 @@ export default function Wizard({ initialType, onDone }: { initialType?: EventTyp
                         aria-pressed={brief.type === t.id}
                       >
                         <t.icon size={26} strokeWidth={1.5} />
-                        <h4>{t.title}</h4>
+                        <h3>{t.title}</h3>
                         <p>{t.text}</p>
                       </button>
                     ))}

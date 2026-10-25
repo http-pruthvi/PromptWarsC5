@@ -60,3 +60,9 @@ Thumbs.db
 
 # Raw audit reports
 docs/*.json
+
+# Test outputs & coverage
+coverage/
+*/coverage/
+test-results/
+playwright-report/

@@ -183,12 +183,11 @@ export default function BudgetTab({ plan, setPlan, totalAlloc, totalSpent, onEdi
         <DonutChart data={chartData} centerLabel="Allocated" centerValue={compactMoney(totalAlloc, cur)} />
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <h4 style={{ fontFamily: 'var(--serif)', fontSize: 24, margin: 0 }}>Category Breakdown</h4>
+            <h3 style={{ fontFamily: 'var(--serif)', fontSize: 24, margin: 0 }}>Category Breakdown</h3>
             <button
               className="btn btn-gold"
               onClick={handleOpenRebalance}
               style={{ padding: '8px 16px', fontSize: 13 }}
-              aria-label="Rebalance budget with AI"
             >
               <Sparkles size={14} /> <span>Rebalance with AI</span>
             </button>

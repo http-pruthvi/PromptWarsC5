@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { CalendarDays, LayoutGrid, Lightbulb, MessageCircleHeart, Palette, PiggyBank, Store, Users } from 'lucide-react'
 import React, { Suspense, useEffect, useRef, useState } from 'react'
 import type { Plan } from '@soiree/shared'
@@ -38,6 +38,7 @@ interface Props {
 }
 
 export default function PlanView({ plan, setPlan, onNew, onBackToDashboard, toast }: Props) {
+  const shouldReduceMotion = useReducedMotion()
   const [tab, setTab] = useState<Tab>('overview')
   const totalAlloc = plan.budget.reduce((s, x) => s + x.allocated, 0)
   const totalSpent = plan.budget.reduce((s, x) => s + x.spent, 0)
@@ -184,10 +185,10 @@ export default function PlanView({ plan, setPlan, onNew, onBackToDashboard, toas
       <AnimatePresence mode="wait">
         <motion.div
           key={tab}
-          initial={{ opacity: 0, y: 14 }}
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.35 }}
+          exit={shouldReduceMotion ? undefined : { opacity: 0, y: -8 }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.35 }}
         >
           {tab === 'overview' && (
             <PlanOverviewTab

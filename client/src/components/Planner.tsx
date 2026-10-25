@@ -86,7 +86,7 @@ export default function Planner({ presetType, user, onRequireAuth: _onRequireAut
   }
 
   return (
-    <main className="planner">
+    <div className="planner">
       <div className="planner-bg" aria-hidden>
         <VectorScene />
       </div>
@@ -183,6 +183,6 @@ export default function Planner({ presetType, user, onRequireAuth: _onRequireAut
           </Suspense>
         )}
       </div>
-    </main>
+    </div>
   )
 }

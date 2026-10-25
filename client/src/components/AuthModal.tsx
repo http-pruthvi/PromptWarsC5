@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Sparkles, Lock, Mail, ArrowRight, UserCheck, X } from 'lucide-react'
 import { api } from '../lib/api'
 import type { User } from '@soiree/shared'
@@ -11,6 +11,7 @@ interface Props {
 }
 
 export default function AuthModal({ onSuccess, onClose, initialMode = 'login' }: Props) {
+  const shouldReduceMotion = useReducedMotion()
   const [mode, setMode] = useState<'login' | 'register'>(initialMode)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -55,10 +56,10 @@ export default function AuthModal({ onSuccess, onClose, initialMode = 'login' }:
       <motion.div
         className="panel modal auth-modal"
         onClick={(e) => e.stopPropagation()}
-        initial={{ opacity: 0, scale: 0.95, y: 16 }}
+        initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.95, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 16 }}
-        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        exit={shouldReduceMotion ? undefined : { opacity: 0, scale: 0.95, y: 16 }}
+        transition={{ duration: shouldReduceMotion ? 0 : 0.3, ease: [0.22, 1, 0.36, 1] }}
         style={{ maxWidth: 460, position: 'relative' }}
       >
         {onClose && (
@@ -76,7 +77,7 @@ export default function AuthModal({ onSuccess, onClose, initialMode = 'login' }:
           <span className="badge" style={{ marginBottom: 10 }}>
             Personal Event Concierge
           </span>
-          <h3 style={{ fontFamily: 'var(--serif)', fontSize: 32, marginBottom: 6 }}>
+          <h3 id="auth-modal-title" style={{ fontFamily: 'var(--serif)', fontSize: 32, marginBottom: 6 }}>
             {mode === 'login' ? 'Welcome back to Soirée' : 'Begin your celebration'}
           </h3>
           <p style={{ color: 'var(--muted)', fontSize: 14 }}>
