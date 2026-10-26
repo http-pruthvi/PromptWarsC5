@@ -272,14 +272,18 @@ npm run format:check
 
 ### Measured Quality Metrics
 
-| Suite                    | Runner / Framework             |  Test Count  |     Measured Result      | Coverage / Audit Status                                                 |
-| :----------------------- | :----------------------------- | :----------: | :----------------------: | :---------------------------------------------------------------------- |
-| **Server Backend Suite** | Vitest + Supertest             | **97 tests** | **97 Passed** (0 failed) | **93.68% Lines**, **93.68% Statements**, **100% Functions**             |
-| **Client RTL Suite**     | Vitest + React Testing Library | **10 tests** | **10 Passed** (0 failed) | Wizard (4), BudgetTab (3), GuestsTab (3)                                |
-| **End-to-End Smoke**     | Playwright (Chromium)          |  **1 test**  | **1 Passed** (0 failed)  | Celebration lifecycle through Wizard, Budget, Guests, Sharing, and Auth |
-| **Accessibility (a11y)** | `@axe-core/playwright`         | **9 views**  |     **0 Violations**     | WCAG 2.1 AA/AAA compliant across Landing, Wizard, Plan, and Modals      |
-| **Static Analysis**      | ESLint + typescript-eslint     |   Monorepo   | **0 Errors, 0 Warnings** | Zero `any` types, strict type-checked rules                             |
-| **Code Formatting**      | Prettier                       |   Monorepo   |    **100% Compliant**    | Verified via `prettier --check .`                                       |
+| Suite                        | Runner / Framework             |    Test Count    |             Measured Result             | Coverage / Audit Status                                                                 |
+| :--------------------------- | :----------------------------- | :--------------: | :-------------------------------------: | :-------------------------------------------------------------------------------------- |
+| **Server Backend Suite**     | Vitest + Supertest             |  **167 tests**   |        **167 Passed** (0 failed)        | **99.71% Lines**, **95.69% Branches**, **100% Functions**                               |
+| **Client RTL Suite**         | Vitest + React Testing Library |   **53 tests**   |        **53 Passed** (0 failed)         | **95.94% Lines**, **85.85% Branches**, **94.64% Functions** across 11 suites            |
+| **Property-Based Suite**     | `fast-check`                   |   **100 runs**   |      **100% Invariants Preserved**      | Brief validation, budget balance invariance, currency roundtrip                         |
+| **End-to-End Smoke**         | Playwright (Chromium)          |    **1 test**    |         **1 Passed** (0 failed)         | Complete celebration lifecycle through Wizard, Budget, Guests, Sharing, Auth            |
+| **Accessibility (a11y)**     | `@axe-core/playwright`         |   **10 views**   |            **0 Violations**             | WCAG 2.2 AA compliant across Landing, Wizard 0-2, PlanView, Guests, Share, Modals       |
+| **Lighthouse Accessibility** | Google Lighthouse CLI          | Desktop & Mobile | **100 / 100 Desktop, 100 / 100 Mobile** | Audited via headless Chromium runner (`npm run audit:a11y`)                             |
+| **Security Audit**           | `npm audit --omit=dev`         |     Monorepo     |          **0 Vulnerabilities**          | 0 critical, 0 high, 0 moderate, 0 low                                                   |
+| **Static Analysis**          | ESLint + typescript-eslint     |     Monorepo     |        **0 Errors, 0 Warnings**         | Zero `any` types, strict type-checked rules, cyclomatic complexity ≤ 10                 |
+| **TypeScript Strictness**    | `tsc --noEmit`                 |   3 workspaces   |            **0 Type Errors**            | Strict + `noUncheckedIndexedAccess`, `noImplicitOverride`, `exactOptionalPropertyTypes` |
+| **Code Formatting**          | Prettier                       |     Monorepo     |           **100% Compliant**            | Verified via `prettier --check .`                                                       |
 
 ### Test Suite Highlights:
 
@@ -329,6 +333,7 @@ All user-scoped endpoints enforce authentication via an `httpOnly` JWT cookie (`
 | `POST`   | `/api/plans/:id/chat`             | Send question to event assistant and persist response                            |
 | `GET`    | `/api/plans/:id/export.ics`       | Download standard RFC 5545 iCalendar file                                        |
 | `GET`    | `/api/health`                     | Health check endpoint                                                            |
+| `GET`    | `/.well-known/security.txt`       | RFC 9116 security contact information and vulnerability reporting policy         |
 
 ---
 
