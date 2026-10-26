@@ -4,7 +4,7 @@ import fs from 'fs'
 import path from 'path'
 import os from 'os'
 import jwt from 'jsonwebtoken'
-import { ZodError, z } from 'zod'
+import { z } from 'zod'
 import type { Request, Response } from 'express'
 import { app } from '../src/app.js'
 import { initDb, closeDb, getDb, getStatement } from '../src/db/index.js'
@@ -62,7 +62,7 @@ describe('Deep Coverage & Security Invariant Test Suite', () => {
 
     // User A setup
     const resA = await request(app).post('/api/auth/guest')
-    userACookie = resA.headers['set-cookie'][0]
+    userACookie = resA.headers['set-cookie']?.[0] ?? ''
 
     const planRes = await request(app).post('/api/plans').set('Cookie', userACookie).send({
       type: 'wedding',
@@ -77,12 +77,12 @@ describe('Deep Coverage & Security Invariant Test Suite', () => {
     })
     expect(planRes.status).toBe(201)
     planAId = planRes.body.plan.id
-    budgetItemAId = planRes.body.plan.budget[0].id
+    budgetItemAId = planRes.body.plan.budget[0]?.id ?? ''
 
     // User B setup
     const resB = await request(app).post('/api/auth/guest')
     expect(resB.status).toBe(201)
-    userBCookie = resB.headers['set-cookie'][0]
+    userBCookie = resB.headers['set-cookie']?.[0] ?? ''
   })
 
   afterAll(() => {
@@ -172,7 +172,12 @@ describe('Deep Coverage & Security Invariant Test Suite', () => {
       try {
         schema.parse({ age: 'invalid' })
       } catch (err) {
-        errorHandler(err as ZodError, {} as Request, mockRes as unknown as Response, vi.fn())
+        errorHandler(
+          err as unknown as Parameters<typeof errorHandler>[0],
+          {} as Request,
+          mockRes as unknown as Response,
+          vi.fn(),
+        )
         expect(mockRes.statusCode).toBe(400)
         expect((mockRes.body as { code: string }).code).toBe('VALIDATION_ERROR')
       }
@@ -257,10 +262,10 @@ describe('Deep Coverage & Security Invariant Test Suite', () => {
           return this
         },
         clearCookie: vi.fn(),
-      } as unknown as Response
+      }
 
       const next = vi.fn()
-      requireAuth(req, res, next)
+      requireAuth(req, res as unknown as Response, next)
       expect(res.statusCode).toBe(401)
       expect(next).not.toHaveBeenCalled()
     })

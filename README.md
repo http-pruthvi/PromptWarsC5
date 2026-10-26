@@ -94,38 +94,72 @@ graph TD
 
 ```
 soiree/
-├── client/                     # Vite + React + TypeScript frontend
-│   ├── public/                 # Static assets (favicon.svg) - no video media
+├── client/                         # Vite + React + TypeScript frontend
+│   ├── public/                     # Static assets (favicon.svg) - no video media
 │   ├── src/
-│   │   ├── components/
-│   │   │   ├── VectorScene.tsx # Procedural animated SVG hero backdrop
-│   │   │   ├── Vectors.tsx     # Vector kit (LotusBloom, ScrollVine, Chandelier, etc.)
-│   │   │   ├── Navbar.tsx      # Responsive nav with accessible mobile drawer (<860px)
-│   │   │   ├── Landing.tsx     # Landing page with hero, bento features, occasions
-│   │   │   ├── Dashboard.tsx   # Saved plans management ("My Plans")
-│   │   │   ├── Planner.tsx     # 3-step event wizard with VectorScene backdrop
-│   │   │   ├── PlanView.tsx    # Plan overview, budget, timeline, vendors, guests, moodboard, chat
-│   │   │   ├── SharedPlanPage.tsx # Public read-only celebration link view (#/share/:token)
-│   │   │   ├── AuthModal.tsx   # Sign in, registration, and 1-click guest access
-│   │   │   └── common.tsx      # DonutChart, Stat, and shared UI primitives
-│   │   ├── lib/                # api.ts (typed fetch wrapper), utils.ts
-│   │   └── index.css           # Luxury editorial styling (cream, blush, mauve, gold)
-│   └── vite.config.ts          # Dev proxy (/api -> http://localhost:4000)
-├── server/                     # Node.js + Express + TypeScript backend
+│   │   ├── components/             # Decomposed UI components (all files <= 250 lines)
+│   │   │   ├── landing/            # LandingHero.tsx, LandingBento.tsx, LandingOccasions.tsx, LandingCta.tsx, LandingFooter.tsx
+│   │   │   ├── tabs/               # Modular plan tabs: OverviewTab, BudgetTab, TimelineTab, VendorsTab, GuestsTab, MoodboardTab, IdeasTab, AskTab, PlanTabBar, PlanTabContent
+│   │   │   ├── budget/             # BudgetDonut.tsx, BudgetList.tsx, BudgetRebalanceModal.tsx, BudgetRow.tsx
+│   │   │   ├── guests/             # GuestDietarySummary.tsx, GuestImportModal.tsx, GuestRow.tsx
+│   │   │   ├── moodboard/          # ColorPalette.tsx, TypographyPairing.tsx, MoodboardGrid.tsx
+│   │   │   ├── plan/               # PlanHeader.tsx, PlanMetrics.tsx, PlanShareModal.tsx
+│   │   │   ├── wizard/             # StepOccasion.tsx, StepDetails.tsx, StepReview.tsx
+│   │   │   ├── navbar/             # NavLinks.tsx, MobileDrawer.tsx
+│   │   │   ├── vectors/            # Bespoke SVG vector icons (LotusBloom, ScrollVine, Chandelier, etc.)
+│   │   │   ├── scene/              # SceneCanvas.tsx, ParticleEngine.tsx
+│   │   │   ├── auth/               # LoginForm.tsx, RegisterForm.tsx
+│   │   │   ├── Landing.tsx         # Orchestrator assembling modular landing sections
+│   │   │   ├── PlanView.tsx        # Orchestrator coordinating tab views and plan lifecycle
+│   │   │   ├── Dashboard.tsx       # Saved plans dashboard ("My Plans")
+│   │   │   ├── Planner.tsx         # 3-step celebration wizard container
+│   │   │   ├── SharedPlanPage.tsx  # Public read-only celebration view (#/share/:token)
+│   │   │   ├── Navbar.tsx          # Frosted-glass navigation with mobile drawer & focus trap
+│   │   │   ├── AuthModal.tsx       # Authentication dialog with 1-click guest access
+│   │   │   ├── VectorScene.tsx     # Procedural SVG animated background canvas
+│   │   │   ├── Vectors.tsx         # Barrel exports for celebration vector kit
+│   │   │   └── common.tsx          # DonutChart, Stat, and shared UI primitives
+│   │   ├── hooks/                  # useAppState.ts, useMotionControl.ts, useShareModal.ts
+│   │   ├── lib/                    # api.ts (typed HTTP client), utils.ts (formatting)
+│   │   ├── test/                   # 11 Vitest RTL suites (53 tests covering tabs, views, and hooks)
+│   │   ├── App.tsx                 # Root application router with hash navigation
+│   │   └── index.css               # Luxury editorial styling system (cream, blush, mauve, gold)
+│   └── vite.config.ts              # Vite dev server proxy (/api -> http://localhost:4000)
+├── server/                         # Node.js + Express + TypeScript backend
 │   ├── src/
-│   │   ├── db/                 # better-sqlite3 connection & safe schema migrations
-│   │   ├── middleware/         # JWT auth, cookie management, errorHandler, rate-limiters
-│   │   ├── routes/             # auth, plans, public, health routers
-│   │   ├── services/           # Gemini AI service, offline generator, ics export
-│   │   ├── app.ts              # Express application configuration
-│   │   └── index.ts            # Server entrypoint with production secret validation
-│   └── tests/                  # Vitest + supertest integration test suite (temp SQLite DB)
-├── shared/                     # Shared TypeScript contracts (@soiree/shared)
-│   └── src/types.ts            # Canonical data types used by client & server
-├── package.json                # Root workspaces & concurrency scripts
-├── Dockerfile                  # Production container build
-├── render.yaml                 # One-click Render cloud deployment spec
-└── .env.example                # Example environment configuration (empty secrets)
+│   │   ├── db/                     # better-sqlite3 connection, WAL mode & migrations
+│   │   ├── errors/                 # Standardized AppError exception hierarchy
+│   │   ├── middleware/             # auth.ts (JWT cookies), errorHandler.ts (sanitized responses)
+│   │   ├── repositories/           # Data access layer isolating parameterized SQL queries:
+│   │   │   ├── plans.repository.ts, budget.repository.ts, milestones.repository.ts
+│   │   │   ├── vendors.repository.ts, guests.repository.ts, moodboard.repository.ts
+│   │   │   └── chat.repository.ts, share.repository.ts
+│   │   ├── routes/                 # Express route controllers:
+│   │   │   ├── auth.ts             # Registration, login, guest sessions, logout, me
+│   │   │   ├── health.ts           # Service uptime and Gemini connectivity checks
+│   │   │   ├── public.ts           # Public sanitized read-only celebration links
+│   │   │   ├── plans.ts            # Top-level plan creation, retrieval, and deletion
+│   │   │   └── plans/              # Modular sub-routers (budget, timeline, vendors, guests, moodboard, chat, ideas, export, share)
+│   │   ├── services/               # Domain service layer:
+│   │   │   ├── plans.service.ts, budget.service.ts, milestones.service.ts
+│   │   │   ├── vendors.service.ts, guests.service.ts, moodboard.service.ts
+│   │   │   ├── chat.service.ts, share.service.ts, rebalancer.ts, generator.ts, ics.ts
+│   │   │   ├── ai/                 # geminiClient.ts, aiParsers.ts, prompts.ts
+│   │   │   └── catalog/            # Deterministic templates, presets, and idea pools
+│   │   ├── utils/                  # logger.ts, sanitize.ts (XSS escaping)
+│   │   ├── app.ts                  # Express application setup, Helmet, CORS, cookies
+│   │   └── index.ts                # Server entrypoint with production secret validation
+│   └── tests/                      # 8 Vitest + Supertest integration suites (167 tests, 99.71% coverage)
+├── shared/                         # Shared TypeScript package (@soiree/shared)
+│   └── src/
+│       ├── types.ts                # Canonical TypeScript data contracts
+│       ├── schemas.ts              # Strict Zod validation schemas for all mutations
+│       ├── utils/                  # money.ts (currency calculations), date.ts
+│       └── index.ts                # Unified barrel exports
+├── package.json                    # Monorepo workspaces & concurrency scripts
+├── Dockerfile                      # Production container deployment
+├── render.yaml                     # Cloud deployment configuration
+└── .env.example                    # Template environment variables (zero secrets)
 ```
 
 ---
