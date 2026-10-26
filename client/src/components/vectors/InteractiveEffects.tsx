@@ -83,7 +83,7 @@ export function CursorSparkles({ target }: { target: RefObject<HTMLElement> }) {
 
   useEffect(() => {
     const el = target.current
-    if (!el || reduce || window.matchMedia('(pointer: coarse)').matches) return
+    if (!el || reduce || window.matchMedia?.('(pointer: coarse)')?.matches) return
 
     const move = (e: PointerEvent) => {
       const now = performance.now()
@@ -93,8 +93,14 @@ export function CursorSparkles({ target }: { target: RefObject<HTMLElement> }) {
       const id = now + Math.random()
       setStars((s) => [
         ...s.slice(-22),
-        { id, x: e.clientX - r.left, y: e.clientY - r.top, s: 0.5 + Math.random() * 0.9 },
+        {
+          id,
+          x: (e.clientX ?? 0) - (r.left || 0),
+          y: (e.clientY ?? 0) - (r.top || 0),
+          s: 0.5 + Math.random() * 0.9,
+        },
       ])
+
       window.setTimeout(() => remove(id), 1100)
     }
 

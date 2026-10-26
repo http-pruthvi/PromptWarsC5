@@ -165,11 +165,11 @@ export function applyRebalanceConstraints(
   const currentSum = clampedItems.reduce((s, i) => s + i.to, 0)
   const diff = totalBudget - currentSum
   if (diff !== 0) {
-    const adjustable = clampedItems
+    const candidate = clampedItems
       .filter((i) => !i.contingency && i.to + diff >= i.spent)
-      .sort((a, b) => b.to - b.spent - (a.to - a.spent))
-    if (adjustable.length > 0 && adjustable[0]) {
-      adjustable[0].to += diff
+      .sort((a, b) => b.to - b.spent - (a.to - a.spent))[0]
+    if (candidate) {
+      candidate.to += diff
     } else {
       return null
     }
@@ -177,9 +177,7 @@ export function applyRebalanceConstraints(
 
   for (const item of clampedItems) {
     if (!item.reason) {
-      if (item.contingency) {
-        item.reason = 'Contingency reserve remains untouched as a dedicated emergency cushion.'
-      } else if (item.to > item.from) {
+      if (item.to > item.from) {
         item.reason = `Increased allocation by ${formatCurrency(item.to - item.from, cur)} to cover verified booking expenses.`
       } else if (item.to < item.from) {
         item.reason = `Reallocated ${formatCurrency(item.from - item.to, cur)} from uncommitted headroom.`

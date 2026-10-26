@@ -85,9 +85,7 @@ function absorbDeficitFromHeadroom(items: WorkingBudgetItem[], totalDeficit: num
   let remainingDeficit = totalDeficit
   const headroomItems = items.filter((i) => !i.contingency && i.headroom > 0)
 
-  for (let idx = 0; idx < headroomItems.length; idx++) {
-    const item = headroomItems[idx]
-    if (!item) continue
+  for (const [idx, item] of headroomItems.entries()) {
     const isLast = idx === headroomItems.length - 1
     const share = isLast
       ? remainingDeficit
@@ -119,14 +117,6 @@ function reconcileTotalSum(items: WorkingBudgetItem[], targetTotal: number): voi
   const candidate = adjustable[0]
   if (candidate) {
     candidate.to += diff
-    return
-  }
-
-  for (const item of items) {
-    if (!item.contingency && item.to + diff >= item.spent) {
-      item.to += diff
-      break
-    }
   }
 }
 

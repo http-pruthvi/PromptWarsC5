@@ -25,8 +25,8 @@ export function initDb(customPath?: string): Database.Database {
   const db = new Database(dbPath)
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
-  db.exec(SCHEMA)
   runMigrations(db)
+  db.exec(SCHEMA)
 
   statementCache.clear()
   dbInstance = db
@@ -47,26 +47,7 @@ function runMigrations(db: Database.Database) {
     db.exec('ALTER TABLE plans ADD COLUMN share_enabled INTEGER NOT NULL DEFAULT 0')
   }
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_plans_share_token ON plans(share_token)')
-
-  db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_plans_user ON plans(user_id);
-    CREATE INDEX IF NOT EXISTS idx_plans_created_at ON plans(created_at);
-    CREATE INDEX IF NOT EXISTS idx_plans_share_enabled ON plans(share_enabled);
-    CREATE INDEX IF NOT EXISTS idx_budget_plan ON budget_items(plan_id);
-    CREATE INDEX IF NOT EXISTS idx_budget_category ON budget_items(category);
-    CREATE INDEX IF NOT EXISTS idx_milestones_plan ON milestones(plan_id);
-    CREATE INDEX IF NOT EXISTS idx_milestones_done ON milestones(done);
-    CREATE INDEX IF NOT EXISTS idx_vendors_plan ON vendors(plan_id);
-    CREATE INDEX IF NOT EXISTS idx_vendors_status ON vendors(status);
-    CREATE INDEX IF NOT EXISTS idx_vendors_category ON vendors(category);
-    CREATE INDEX IF NOT EXISTS idx_ideas_plan ON idea_groups(plan_id);
-    CREATE INDEX IF NOT EXISTS idx_chat_plan ON chat_messages(plan_id);
-    CREATE INDEX IF NOT EXISTS idx_chat_created_at ON chat_messages(created_at);
-    CREATE INDEX IF NOT EXISTS idx_moodboards_plan ON moodboards(plan_id);
-    CREATE INDEX IF NOT EXISTS idx_guests_plan ON guests(plan_id);
-    CREATE INDEX IF NOT EXISTS idx_guests_status ON guests(status);
-    CREATE INDEX IF NOT EXISTS idx_guests_dietary ON guests(dietary);
-  `)
+  db.exec('CREATE INDEX IF NOT EXISTS idx_plans_share_enabled ON plans(share_enabled)')
 }
 
 const statementCache = new Map<string, Database.Statement>()

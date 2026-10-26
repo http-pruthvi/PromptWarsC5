@@ -116,4 +116,20 @@ describe('Wizard Component Unit & Integration Tests', () => {
       { timeout: 4000 },
     )
   })
+
+  it('displays error message when plan generation fails', async () => {
+    vi.mocked(api.plans.create).mockRejectedValueOnce(new Error('AI generation rate limit exceeded'))
+    render(<Wizard initialType="wedding" onDone={vi.fn()} />)
+
+    // Step 2
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }))
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Generate my plan/i })).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Generate my plan/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('AI generation rate limit exceeded')).toBeInTheDocument()
+    })
+  })
 })

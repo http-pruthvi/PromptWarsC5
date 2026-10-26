@@ -22,14 +22,15 @@ const LOG_LEVELS: Record<LogLevel, number> = {
   error: 40,
 }
 
-const currentLevel: LogLevel =
-  (process.env.LOG_LEVEL as LogLevel | undefined) ?? (process.env.NODE_ENV === 'test' ? 'error' : 'info')
+function getCurrentLevel(): LogLevel {
+  return (process.env.LOG_LEVEL as LogLevel | undefined) ?? (process.env.NODE_ENV === 'test' ? 'error' : 'info')
+}
 
 /**
  * Format and write structured log entries.
  */
 function outputLog(level: LogLevel, message: string, context?: Record<string, unknown>, error?: Error): void {
-  if (LOG_LEVELS[level] < LOG_LEVELS[currentLevel]) {
+  if (LOG_LEVELS[level] < LOG_LEVELS[getCurrentLevel()]) {
     return
   }
 

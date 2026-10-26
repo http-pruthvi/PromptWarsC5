@@ -9,7 +9,7 @@ export function getApiKey(): string {
  * Retrieve configured Gemini AI model name.
  */
 export function getModel(): string {
-  return process.env.GEMINI_MODEL?.trim() ?? 'gemini-2.5-flash'
+  return process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash'
 }
 
 interface GeminiPart {

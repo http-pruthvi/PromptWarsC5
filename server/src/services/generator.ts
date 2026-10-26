@@ -48,18 +48,16 @@ function pickRandom<T>(arr: readonly T[], n: number): T[] {
   return copy.slice(0, n)
 }
 
+const DEFAULT_VIBE = {
+  keys: ['classic'],
+  theme: 'Royal Heritage',
+  palette: 'Deep maroon, antique gold and cream',
+  decor: 'Brass diyas, marigold canopies and embroidered drapes',
+}
+
 function matchVibe(vibe: string) {
   const v = (vibe || '').toLowerCase()
-  const match = VIBES.find((x) => x.keys.some((k) => v.includes(k)))
-  if (match) return match
-  const first = VIBES[0]
-  if (first) return first
-  return {
-    keys: ['classic'],
-    theme: 'Royal Heritage',
-    palette: 'Deep maroon, antique gold and cream',
-    decor: 'Brass diyas, marigold canopies and embroidered drapes',
-  }
+  return VIBES.find((x) => x.keys.some((k) => v.includes(k))) ?? VIBES[0] ?? DEFAULT_VIBE
 }
 
 /**

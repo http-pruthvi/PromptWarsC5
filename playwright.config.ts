@@ -24,13 +24,13 @@ export default defineConfig({
     {
       command: 'npm run dev -w @soiree/server',
       port: 4000,
-      reuseExistingServer: false,
+      reuseExistingServer: !process.env.CI,
       timeout: 30000,
     },
     {
       command: 'npm run dev -w @soiree/client',
       port: 5173,
-      reuseExistingServer: false,
+      reuseExistingServer: !process.env.CI,
       timeout: 30000,
     },
   ],

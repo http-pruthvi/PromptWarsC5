@@ -18,7 +18,7 @@ const ENTITY_MAP: Record<string, string> = {
  */
 export function escapeHtml(str: string): string {
   if (!str) return ''
-  return String(str).replace(/[&<>"'/]/g, (s) => ENTITY_MAP[s] || s)
+  return String(str).replace(/[&<>"'/]/g, (s) => ENTITY_MAP[s] as string)
 }
 
 /**

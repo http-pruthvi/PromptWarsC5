@@ -158,4 +158,54 @@ describe('GuestsTab Component Unit & Integration Tests', () => {
       expect(toastMock).toHaveBeenCalledWith('Imported 2 guests')
     })
   })
+
+  it('handles guest status toggle, deletion, and displays capacity alert when over limit', async () => {
+    vi.mocked(api.plans.updateGuest).mockResolvedValue({
+      guest: { ...initialGuests[0]!, status: 'declined' },
+    })
+    vi.mocked(api.plans.deleteGuest).mockResolvedValue({ message: 'Deleted' })
+
+    const toastMock = vi.fn()
+    // Planned capacity is 1, but confirmed headcount is 2 -> triggers capacity alert
+    render(<GuestsTab plan={{ ...mockPlan, brief: { ...mockPlan.brief, guests: 1 } }} toast={toastMock} />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeInTheDocument()
+      expect(screen.getByText(/Headcount Alert: Capacity Exceeded/i)).toBeInTheDocument()
+    })
+
+    // Change RSVP status
+    const select = screen.getByLabelText(/RSVP status for Rohan Sharma/i)
+    fireEvent.change(select, { target: { value: 'declined' } })
+
+    // Remove guest
+    const removeBtn = screen.getByRole('button', { name: /remove guest rohan sharma/i })
+    fireEvent.click(removeBtn)
+    await waitFor(() => {
+      expect(api.plans.deleteGuest).toHaveBeenCalledWith(mockPlan.id, 'g1')
+      expect(toastMock).toHaveBeenCalledWith('Guest removed')
+    })
+  })
+
+  it('filters guests by search query and renders empty table states', async () => {
+    vi.mocked(api.plans.listGuests).mockResolvedValueOnce({ guests: [], total: 0, limit: 100, offset: 0 })
+    vi.mocked(api.plans.getGuestSummary).mockResolvedValueOnce({ summary: null as unknown as GuestSummary })
+
+    const { rerender } = render(<GuestsTab plan={mockPlan} toast={vi.fn()} />)
+    await waitFor(() => {
+      expect(screen.getByText('No guests added yet')).toBeInTheDocument()
+    })
+
+    // Search query with no matches
+    vi.mocked(api.plans.listGuests).mockResolvedValueOnce({ guests: initialGuests, total: 2, limit: 100, offset: 0 })
+    rerender(<GuestsTab plan={mockPlan} toast={vi.fn()} />)
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Rohan Sharma')).toBeInTheDocument()
+    })
+
+    const searchInput = screen.getByLabelText('Search guests')
+    fireEvent.change(searchInput, { target: { value: 'Nonexistent person' } })
+    expect(screen.getByText('No guests match your filters')).toBeInTheDocument()
+  })
 })
