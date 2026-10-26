@@ -61,6 +61,9 @@ interface UserRow {
   created_at: number
 }
 
+// Precomputed bcrypt hash used to equalize execution time when an email does not exist
+const DUMMY_HASH = '$2a$10$wK1Wq6h3t1GZ0Zk.O1oD.eb3e7uQvNq7YmJvJm8.r8P5Q5hP5z2Ki'
+
 // POST /api/auth/login
 authRouter.post('/login', async (req, res, next) => {
   try {
@@ -71,12 +74,11 @@ authRouter.post('/login', async (req, res, next) => {
     const userRow = db
       .prepare('SELECT id, email, password_hash, is_guest, created_at FROM users WHERE email = ?')
       .get(normalizedEmail) as UserRow | undefined
-    if (!userRow || !userRow.password_hash) {
-      return res.status(401).json({ error: 'Invalid email or password' })
-    }
 
-    const valid = await bcrypt.compare(password, userRow.password_hash)
-    if (!valid) {
+    const hashToCompare = userRow?.password_hash ?? DUMMY_HASH
+    const valid = await bcrypt.compare(password, hashToCompare)
+
+    if (!userRow || !userRow.password_hash || !valid) {
       return res.status(401).json({ error: 'Invalid email or password' })
     }
 

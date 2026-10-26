@@ -198,4 +198,22 @@ describe('Server Deep Branches Final Coverage', () => {
     )
     expect(proposal?.changes.find((i) => i.itemId === 'b2')?.to).toBe(1200)
   })
+
+  it('serves RFC 9116 security.txt and verifies hardened security headers', async () => {
+    const res = await request(app).get('/.well-known/security.txt')
+    expect(res.status).toBe(200)
+    expect(res.text).toContain('Contact: mailto:security@soiree.app')
+    expect(res.text).toContain('Expires:')
+
+    const altRes = await request(app).get('/security.txt')
+    expect(altRes.status).toBe(200)
+    expect(altRes.text).toContain('Canonical: https://soiree.app/.well-known/security.txt')
+
+    // Verify Helmet and Custom Headers
+    expect(res.headers['permissions-policy']).toContain('camera=()')
+    expect(res.headers['permissions-policy']).toContain('microphone=()')
+    expect(res.headers['cross-origin-opener-policy']).toBe('same-origin')
+    expect(res.headers['cross-origin-resource-policy']).toBe('same-origin')
+    expect(res.headers['content-security-policy']).toContain("default-src 'self'")
+  })
 })

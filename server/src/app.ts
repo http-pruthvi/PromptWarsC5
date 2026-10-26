@@ -28,13 +28,58 @@ if (process.env.NODE_ENV === 'production') {
 // Response compression
 app.use(compression())
 
-// Security headers
+// Security headers: Helmet CSP, COOP, CORP, Referrer-Policy, and HSTS
 app.use(
   helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https://images.unsplash.com'],
+        connectSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        frameAncestors: ["'none'"],
+        upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
+      },
+    },
+    crossOriginOpenerPolicy: { policy: 'same-origin' },
+    crossOriginResourcePolicy: { policy: 'same-origin' },
     crossOriginEmbedderPolicy: false,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
   }),
 )
+
+// Permissions-Policy header
+app.use((_req, res, next) => {
+  res.setHeader(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
+  )
+  next()
+})
+
+const SECURITY_TXT = `Contact: mailto:security@soiree.app
+Expires: 2027-12-31T23:59:59.000Z
+Preferred-Languages: en
+Canonical: https://soiree.app/.well-known/security.txt
+Policy: https://github.com/soiree/soiree/blob/main/SECURITY.md
+`
+
+// RFC 9116 security contact endpoints
+app.get(['/.well-known/security.txt', '/security.txt'], (_req, res) => {
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+  res.setHeader('Cache-Control', 'public, max-age=86400')
+  res.send(SECURITY_TXT)
+})
 
 // CORS for local development and production
 app.use(
