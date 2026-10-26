@@ -70,10 +70,10 @@ describe('Server Deep Branches Final Coverage', () => {
     const planId = `test-done-plan-${Date.now()}`
     const plan: Plan = {
       id: planId,
-      createdAt: new Date().toISOString(),
+      createdAt: Date.now(),
       brief: {
         title: 'Party',
-        type: 'dinner',
+        type: 'birthday',
         date: '2026-12-31',
         guests: 10,
         budget: 1000,
@@ -83,7 +83,7 @@ describe('Server Deep Branches Final Coverage', () => {
         notes: '',
       },
       summary: 'Summary',
-      generatedBy: 'catalog',
+      generatedBy: 'local',
       budget: [],
       timeline: [{ id: `m-done-${Date.now()}`, label: 'Done', detail: 'Done task', weeksBefore: 2, done: true }],
       vendors: [],
@@ -104,19 +104,19 @@ describe('Server Deep Branches Final Coverage', () => {
     expect(msg.createdAt).toBeGreaterThan(0)
 
     const guests = guestsRepository.batchInsertGuests(planId, [
-      { name: 'Alice', party: 2, status: 'attending', dietary: 'None' },
+      { name: 'Alice', party: 2, status: 'attending', dietary: 'none', notes: '' },
     ])
     expect(guests[0]?.notes).toBe('')
 
     const mb = moodboardRepository.upsertMoodboard(
       planId,
       {
-        palette: ['#ffffff'],
-        aesthetic: 'Modern',
-        textures: ['Silk'],
-        lighting: 'Candle',
-        floral: ['Roses'],
-        decorElements: ['Drapes'],
+        palette: [{ name: 'White', hex: '#ffffff', role: 'Base' }],
+        typography: { heading: 'Playfair', body: 'Inter', vibe: 'Chic' },
+        motifs: ['Silk'],
+        decor: ['Drapes', 'Candle'],
+        outfitNotes: ['Smart casual'],
+        playlistVibes: ['Jazz'],
       },
       'offline',
     )
@@ -153,6 +153,7 @@ describe('Server Deep Branches Final Coverage', () => {
   it('tests generateIdeas with extra direction and missing group items', async () => {
     process.env.GEMINI_API_KEY = 'mock-key'
     const mockBrief: Brief = {
+      title: 'Birthday Celebration',
       type: 'birthday',
       city: 'Berlin',
       date: '2026-11-20',
@@ -160,6 +161,7 @@ describe('Server Deep Branches Final Coverage', () => {
       budget: 2000,
       currency: 'EUR',
       vibe: 'cozy',
+      notes: '',
     }
 
     vi.stubGlobal(

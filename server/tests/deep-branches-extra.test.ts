@@ -24,13 +24,12 @@ const TEST_DB = path.resolve(os.tmpdir(), `soiree-extra-${Date.now()}-${Math.ran
 
 function cleanDb() {
   for (const f of [TEST_DB, `${TEST_DB}-wal`, `${TEST_DB}-shm`, `${TEST_DB}-journal`]) {
-    if (fs.existsSync(f)) {
+    if (fs.existsSync(f))
       try {
         fs.unlinkSync(f)
       } catch {
-        // ignore
+        /* ignore */
       }
-    }
   }
 }
 
@@ -46,7 +45,7 @@ describe('Deep Branches Extra & Utilities Coverage Suite', () => {
 
     const res = await request(app).post('/api/auth/guest')
     expect(res.status).toBe(201)
-    userCookie = res.headers['set-cookie'][0]
+    userCookie = res.headers['set-cookie']?.[0] ?? ''
     userId = res.body.user.id
 
     sampleBrief = {
@@ -110,16 +109,12 @@ describe('Deep Branches Extra & Utilities Coverage Suite', () => {
   })
 
   describe('2. Repositories Direct Coverage', () => {
-    it('tests milestonesRepository findByPlanId', () => {
+    it('tests milestones and chat repositories', () => {
       const milestones = milestonesRepository.findByPlanId(planId)
       expect(Array.isArray(milestones)).toBe(true)
       expect(milestones.length).toBeGreaterThan(0)
-    })
 
-    it('tests chatRepository count and full history retrieval', () => {
-      const missingCount = chatRepository.countByPlanId('non-existent-plan')
-      expect(missingCount).toBe(0)
-
+      expect(chatRepository.countByPlanId('non-existent-plan')).toBe(0)
       chatRepository.appendMessage(planId, 'user', 'Hello there')
       const history = chatRepository.getFullHistory(planId)
       expect(history.length).toBeGreaterThanOrEqual(1)
@@ -140,15 +135,21 @@ describe('Deep Branches Extra & Utilities Coverage Suite', () => {
     })
 
     it('tests budget, vendors and guests repository default fallbacks', () => {
-      expect(budgetRepository.updateItem(planId, 'missing-item', { category: 'Decor', allocated: 10000 })).toBe(false)
+      const budgetData = { category: 'Decor', allocated: 10000, spent: 0, note: '' }
+      expect(budgetRepository.updateItem(planId, 'missing-item', budgetData)).toBe(false)
       expect(milestonesRepository.updateDone(planId, 'missing-m', false)).toBe(false)
 
-      const v = vendorsRepository.insertVendor(planId, { category: 'DJ', name: 'DJ Beat', status: 'todo' })
+      const v = vendorsRepository.insertVendor(planId, {
+        category: 'DJ',
+        name: 'DJ Beat',
+        status: 'todo',
+        estimate: 0,
+        tips: '',
+      })
       expect(v.estimate).toBe(0)
       expect(v.tips).toBe('')
-      expect(vendorsRepository.updateVendor(planId, v.id, { category: 'DJ', name: 'DJ Pro', status: 'booked' })).toBe(
-        true,
-      )
+      const vUpdate = { category: 'DJ', name: 'DJ Pro', status: 'booked' as const, estimate: 0, tips: '' }
+      expect(vendorsRepository.updateVendor(planId, v.id, vUpdate)).toBe(true)
 
       const g1 = guestsRepository.insertGuest(planId, {
         name: 'VIP Guest',
@@ -158,16 +159,17 @@ describe('Deep Branches Extra & Utilities Coverage Suite', () => {
         notes: 'VIP',
       })
       expect(g1.notes).toBe('VIP')
-      const g2 = guestsRepository.insertGuest(planId, {
+      const plainGuest = {
         name: 'Guest Plain',
         party: 1,
-        status: 'pending',
-        dietary: 'none',
-      })
+        status: 'pending' as const,
+        dietary: 'none' as const,
+        notes: '',
+      }
+      const g2 = guestsRepository.insertGuest(planId, plainGuest)
       expect(g2.notes).toBe('')
-      expect(
-        guestsRepository.updateGuest(planId, 'missing-g', { name: 'G', party: 1, status: 'pending', dietary: 'none' }),
-      ).toBe(false)
+      const gUpdate = { name: 'G', party: 1, status: 'pending' as const, dietary: 'none' as const, notes: '' }
+      expect(guestsRepository.updateGuest(planId, 'missing-g', gUpdate)).toBe(false)
     })
   })
 

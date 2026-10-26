@@ -331,6 +331,8 @@ describe('Deep Coverage & Security Invariant Test Suite', () => {
         category: 'Photography',
         name: 'Lens Studio Updated',
         status: 'contacted',
+        estimate: 0,
+        tips: '',
       })
       expect(updated).toBe(true)
 

@@ -15,13 +15,12 @@ const TEST_DB = path.resolve(os.tmpdir(), `soiree-final-${Date.now()}-${Math.ran
 
 function cleanDb() {
   for (const f of [TEST_DB, `${TEST_DB}-wal`, `${TEST_DB}-shm`, `${TEST_DB}-journal`]) {
-    if (fs.existsSync(f)) {
+    if (fs.existsSync(f))
       try {
         fs.unlinkSync(f)
       } catch {
-        // ignore
+        /* ignore */
       }
-    }
   }
 }
 
@@ -164,6 +163,7 @@ describe('Server Invariants & Branch Final Polish Suite', () => {
         party: 1,
         status: 'pending',
         dietary: 'none',
+        notes: '',
       })
       expect(gNoNotes.notes).toBe('')
 
