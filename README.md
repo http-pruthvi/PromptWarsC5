@@ -8,9 +8,11 @@
 
 📚 **Engineering Specifications & Audits**:
 
-- [Architecture Guide](file:///c:/Users/pruthvi/Desktop/Hobbies/Challenge5/soiree/ARCHITECTURE.md) — System topology, modular routers, SQLite schema, WAL mode, and dual GenAI engine.
-- [Performance & CLS Audit](file:///c:/Users/pruthvi/Desktop/Hobbies/Challenge5/soiree/PERFORMANCE.md) — Empirical Lighthouse benchmarks, mobile CLS resolution, and chunk size metrics.
-- [Security Specification](file:///c:/Users/pruthvi/Desktop/Hobbies/Challenge5/soiree/SECURITY.md) — Section B.2 strict Zod hardening, body size limits, RFC 5545 escaping, and XSS sanitization.
+- [Quality & Verification Report](docs/QUALITY_REPORT.md) — Comprehensive evidence report with empirical audit metrics (Zero ESLint/TS errors, 99.71% test coverage, 100/100 Lighthouse A11y, 0 security vulnerabilities).
+- [Architecture Guide](ARCHITECTURE.md) — System topology, modular routers, SQLite schema, WAL mode, and dual GenAI engine.
+- [Accessibility Compliance (VPAT)](ACCESSIBILITY.md) — WCAG 2.2 AA audit matrix, 0 axe-core violations, 100 Lighthouse score, and pause motion toggle.
+- [Performance & CLS Audit](PERFORMANCE.md) — Empirical Lighthouse benchmarks, mobile CLS resolution, and chunk size metrics.
+- [Security Specification](SECURITY.md) — Hardened headers, timing attack prevention, token rotation, and RFC 9116 security.txt.
 
 ---
 
