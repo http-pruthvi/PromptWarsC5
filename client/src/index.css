@@ -190,6 +190,7 @@ em {
   align-items: center;
   justify-content: space-between;
   gap: 20px;
+  min-width: 0;
 }
 .brand {
   display: flex;
@@ -201,6 +202,8 @@ em {
   cursor: pointer;
   background: none;
   border: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .brand svg {
   color: var(--gold);
@@ -235,6 +238,7 @@ em {
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-shrink: 0;
 }
 .nav-burger {
   display: none;
@@ -260,6 +264,15 @@ em {
   }
   .nav-burger {
     display: inline-flex;
+  }
+  .brand {
+    font-size: 22px;
+  }
+  .nav-actions > .btn {
+    display: none;
+  }
+  .nav-actions > div {
+    display: none;
   }
 }
 

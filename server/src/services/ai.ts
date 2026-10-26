@@ -7,185 +7,67 @@ import type {
   Moodboard,
   Plan,
 } from '@soiree/shared'
+import { logger } from '../utils/logger.js'
+import { generateLocalPlan, generateOfflineMoodboard, localAnswer, localIdeas } from './generator.js'
+import { callGemini, getApiKey, getModel } from './ai/geminiClient.js'
 import {
-  buildBudget,
-  buildTimeline,
-  buildVendors,
-  generateLocalPlan,
-  generateOfflineBudgetRebalance,
-  generateOfflineMoodboard,
-  localAnswer,
-  localIdeas,
-  money,
-  normalizePercents,
-  uid,
-  weeksUntil,
-} from './generator.js'
+  SYSTEM_PROMPT,
+  briefLine,
+  buildChatPrompt,
+  buildMoodboardPrompt,
+  buildPlanPrompt,
+  buildRebalancePrompt,
+  parseJsonClean,
+} from './ai/prompts.js'
+import { generateOfflineBudgetRebalance } from './rebalancer.js'
+import {
+  applyRebalanceConstraints,
+  parseAndBuildPlan,
+  parseRebalanceResponse,
+  validateAndMapMoodboard,
+} from './ai/aiParsers.js'
 
-function getApiKey(): string {
-  return process.env.GEMINI_API_KEY?.trim() || ''
-}
-
-function getModel(): string {
-  return process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash'
-}
-
-async function callGemini(prompt: string, json: boolean, system?: string): Promise<string> {
-  const key = getApiKey()
-  if (!key) throw new Error('No Gemini API key')
-  const model = getModel()
-
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: system ? { parts: [{ text: system }] } : undefined,
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.8,
-          ...(json ? { responseMimeType: 'application/json' } : {}),
-        },
-      }),
-    },
-  )
-  if (!res.ok) throw new Error(`Gemini HTTP error ${res.status}: ${res.statusText}`)
-  interface GeminiApiResponse {
-    candidates?: Array<{
-      content?: {
-        parts?: Array<{ text?: string }>
-      }
-    }>
-  }
-  const data = (await res.json()) as GeminiApiResponse
-  const text: string | undefined = data?.candidates?.[0]?.content?.parts
-    ?.map((p: { text?: string }) => p.text ?? '')
-    .join('')
-  if (!text) throw new Error('Empty response from Gemini')
-  return text
-}
-
-const SYSTEM =
-  'You are Soirée, an expert event planner for weddings, birthdays and community events, with deep knowledge of Indian and global celebrations. ' +
-  'Be practical, warm and specific. Keep budgets realistic for the stated city and guest count.'
-
-function briefLine(b: Brief): string {
-  return (
-    `Event type: ${b.type}. Title: ${b.title || 'untitled'}. Date: ${b.date} (${Math.round(weeksUntil(b.date))} weeks away). ` +
-    `Guests: ${b.guests}. Total budget: ${money(b.budget, b.currency)}. City: ${b.city || 'unspecified'}. ` +
-    `Vibe: ${b.vibe || 'unspecified'}. Notes: ${b.notes || 'none'}.`
-  )
-}
-
-interface AiPlanJson {
-  summary?: string
-  budget?: Array<{ category: string; percent: number; note?: string }>
-  timeline?: Array<{ label: string; detail?: string; weeksBefore: number }>
-  vendors?: Array<{ category: string; percent: number; tips?: string }>
-  ideas?: Array<{ title: string; items: string[] }>
-}
-
-function parseJson<T>(text: string): T {
-  const cleaned = text
-    .replace(/^```(?:json)?/i, '')
-    .replace(/```$/, '')
-    .trim()
-  return JSON.parse(cleaned) as T
-}
-
+/**
+ * Generate a complete celebration plan via Gemini AI, with automatic offline fallback.
+ */
 export async function generatePlan(brief: Brief): Promise<Plan> {
   if (!getApiKey()) {
     return generateLocalPlan(brief)
   }
 
-  const prompt =
-    `Create a complete event plan.\n${briefLine(brief)}\n\n` +
-    `Return ONLY JSON with this shape:\n` +
-    `{"summary": string (2-3 sentences),\n"budget": [{"category": string, "percent": number, "note": string}] (6-9 rows, percents sum to 100, include a Contingency row),\n` +
-    `"timeline": [{"label": string, "detail": string, "weeksBefore": number}] (8-14 milestones, weeksBefore <= ${Math.max(1, Math.round(weeksUntil(brief.date)))}, last one is 0),\n` +
-    `"vendors": [{"category": string, "percent": number, "tips": string}] (6-10 rows; percent of total budget),\n` +
-    `"ideas": [{"title": string, "items": string[]}] (4-5 groups of 4-5 personalised ideas: theme & look, menu, entertainment, guest experience, etc.)}`
-
   try {
-    const raw = await callGemini(prompt, true, SYSTEM)
-    const j = parseJson<AiPlanJson>(raw)
-    if (!j.budget?.length || !j.timeline?.length || !j.vendors?.length || !j.ideas?.length) {
-      throw new Error('Incomplete structure in Gemini response')
-    }
-
-    const budget = buildBudget(
-      brief,
-      normalizePercents(
-        j.budget.map((b) => ({ category: String(b.category), percent: Number(b.percent) || 0, note: b.note ?? '' })),
-      ),
-    )
-    const timeline = buildTimeline(
-      brief,
-      j.timeline.map((t) => ({
-        label: String(t.label),
-        detail: t.detail ?? '',
-        weeksBefore: Number(t.weeksBefore) || 0,
-      })),
-    )
-    const vendors = buildVendors(
-      brief,
-      j.vendors.map((v) => ({ category: String(v.category), percent: Number(v.percent) || 1, tips: v.tips ?? '' })),
-    )
-    const ideas: IdeaGroup[] = j.ideas.map((g) => ({ title: String(g.title), items: (g.items ?? []).map(String) }))
-
-    return {
-      id: uid(),
-      createdAt: Date.now(),
-      brief,
-      summary: j.summary || generateLocalPlan(brief).summary,
-      budget,
-      timeline,
-      vendors,
-      ideas,
-      generatedBy: 'gemini',
-    }
+    const raw = await callGemini(buildPlanPrompt(brief), true, SYSTEM_PROMPT)
+    return parseAndBuildPlan(raw, brief)
   } catch (err) {
-    console.warn('[Gemini AI] Call failed or skipped, using offline smart engine fallback:', err)
+    logger.warn('Gemini AI plan call failed, falling back to offline engine', { error: String(err) })
     return generateLocalPlan(brief)
   }
 }
 
+/**
+ * Generate celebration theme and activity ideas using Gemini AI or catalog heuristics.
+ */
 export async function generateIdeas(brief: Brief, extra = ''): Promise<{ ideas: IdeaGroup[]; ai: boolean }> {
   if (getApiKey()) {
     try {
-      const raw = await callGemini(
+      const prompt =
         `Give me a fresh set of personalised ideas.\n${briefLine(brief)}\n${extra ? 'Extra direction: ' + extra + '\n' : ''}` +
-          `Return ONLY JSON: [{"title": string, "items": string[]}] with 4-5 groups of 4-5 specific ideas each.`,
-        true,
-        SYSTEM,
-      )
-      const arr = parseJson<IdeaGroup[]>(raw)
-      if (Array.isArray(arr) && arr.length) {
+        'Return ONLY JSON: [{"title": string, "items": string[]}] with 4-5 groups of 4-5 specific ideas each.'
+      const raw = await callGemini(prompt, true, SYSTEM_PROMPT)
+      const arr = parseJsonClean<IdeaGroup[]>(raw)
+      if (Array.isArray(arr) && arr.length > 0) {
         return { ideas: arr.map((g) => ({ title: String(g.title), items: (g.items ?? []).map(String) })), ai: true }
       }
     } catch (err) {
-      console.warn('[Gemini AI] Idea generation fallback:', err)
+      logger.warn('Gemini AI idea generation failed, falling back to local catalog', { error: String(err) })
     }
   }
   return { ideas: localIdeas(brief), ai: false }
 }
 
-function planContext(plan: Plan): string {
-  const b = plan.brief
-  const spent = plan.budget.reduce((s, x) => s + x.spent, 0)
-  return (
-    briefLine(b) +
-    `\nSpent so far: ${money(spent, b.currency)}.` +
-    `\nBudget: ${plan.budget.map((x) => `${x.category} ${money(x.allocated, b.currency)} (spent ${money(x.spent, b.currency)})`).join('; ')}.` +
-    `\nPending milestones: ${plan.timeline
-      .filter((t) => !t.done)
-      .map((t) => `${t.label} (${t.weeksBefore}w before)`)
-      .join('; ')}.` +
-    `\nVendors: ${plan.vendors.map((v) => `${v.category}: ${v.status}`).join('; ')}.`
-  )
-}
-
+/**
+ * Answer event planning questions using conversational AI context.
+ */
 export async function askAssistant(
   plan: Plan,
   history: ChatMessage[],
@@ -193,118 +75,61 @@ export async function askAssistant(
 ): Promise<{ text: string; ai: boolean }> {
   if (getApiKey()) {
     try {
-      const convo = history
-        .slice(-6)
-        .map((m) => `${m.role === 'user' ? 'User' : 'Soirée'}: ${m.text}`)
-        .join('\n')
-      const text = await callGemini(
-        `Current plan context:\n${planContext(plan)}\n\nConversation so far:\n${convo}\n\nUser: ${question}\n\nAnswer concisely (max ~120 words) with concrete, actionable suggestions.`,
-        false,
-        SYSTEM,
-      )
+      const prompt = buildChatPrompt(plan, history, question)
+      const text = await callGemini(prompt, false, SYSTEM_PROMPT)
       return { text: text.trim(), ai: true }
     } catch (err) {
-      console.warn('[Gemini AI] Chat fallback:', err)
+      logger.warn('Gemini AI chat assistant failed, falling back to local responder', { error: String(err) })
     }
   }
   return { text: localAnswer(plan, question), ai: false }
 }
 
+/**
+ * Generate an aesthetic event moodboard and colour palette using AI or offline presets.
+ */
 export async function generateMoodboard(
   brief: Brief,
   extra?: string,
 ): Promise<{ moodboard: Moodboard; generatedBy: 'gemini' | 'offline' }> {
   const offline = generateOfflineMoodboard(brief, extra)
-
-  try {
-    const key = getApiKey()
-    if (!key) {
-      return { moodboard: offline, generatedBy: 'offline' }
-    }
-
-    const prompt = `
-Create an aesthetic event moodboard and color palette for this event:
-${briefLine(brief)}
-${extra ? `Additional user vision / steering guidance: "${extra}"` : ''}
-
-Respond with a single JSON object containing:
-- "palette": exactly 5 items, each having "name" (string), "hex" (valid 6-digit hex string matching /^#[0-9a-f]{6}$/i), and "role" (string describing its purpose like "Primary Metallic Accent", "Neutral Canvas", etc.)
-- "typography": { "heading": string (font name), "body": string (font name), "vibe": string (short description) }
-- "motifs": array of 4-6 specific visual motifs/patterns (e.g., "Mughal archways", "wildflower garlands")
-- "decor": array of 4 specific decor styling points
-- "outfitNotes": array of 4 attire suggestions for hosts and guests
-- "playlistVibes": array of 4 musical mood styles
-
-CRITICAL: "palette" MUST contain exactly 5 colors, and every "hex" MUST be a 6-digit lowercase/uppercase hex starting with '#' (e.g. "#d4af37").
-`
-
-    const raw = await callGemini(prompt, true, SYSTEM)
-    interface RawMoodboardColor {
-      name?: unknown
-      role?: unknown
-      hex?: unknown
-    }
-    interface RawMoodboardResponse {
-      palette?: RawMoodboardColor[]
-      typography?: {
-        heading?: unknown
-        body?: unknown
-        vibe?: unknown
-      }
-      motifs?: unknown[]
-      decor?: unknown[]
-      outfitNotes?: unknown[]
-      playlistVibes?: unknown[]
-    }
-    const parsed = JSON.parse(raw) as RawMoodboardResponse
-
-    const hexRegex = /^#[0-9a-f]{6}$/i
-    if (
-      !parsed ||
-      !Array.isArray(parsed.palette) ||
-      parsed.palette.length !== 5 ||
-      !parsed.palette.every(
-        (c) =>
-          typeof c?.name === 'string' &&
-          typeof c?.role === 'string' &&
-          typeof c?.hex === 'string' &&
-          hexRegex.test(c.hex),
-      ) ||
-      !parsed.typography ||
-      typeof parsed.typography.heading !== 'string' ||
-      typeof parsed.typography.body !== 'string' ||
-      typeof parsed.typography.vibe !== 'string' ||
-      !Array.isArray(parsed.motifs) ||
-      !Array.isArray(parsed.decor) ||
-      !Array.isArray(parsed.outfitNotes) ||
-      !Array.isArray(parsed.playlistVibes)
-    ) {
-      console.warn('[AI Moodboard] Gemini output failed strict validation, falling back to offline')
-      return { moodboard: offline, generatedBy: 'offline' }
-    }
-
-    const moodboard: Moodboard = {
-      palette: parsed.palette.map((c) => ({
-        name: String(c.name).trim(),
-        hex: String(c.hex).trim().toLowerCase(),
-        role: String(c.role).trim(),
-      })),
-      typography: {
-        heading: String(parsed.typography.heading).trim(),
-        body: String(parsed.typography.body).trim(),
-        vibe: String(parsed.typography.vibe).trim(),
-      },
-      motifs: parsed.motifs.map((m) => String(m).trim()),
-      decor: parsed.decor.map((d) => String(d).trim()),
-      outfitNotes: parsed.outfitNotes.map((o) => String(o).trim()),
-      playlistVibes: parsed.playlistVibes.map((p) => String(p).trim()),
-    }
-
-    return { moodboard, generatedBy: 'gemini' }
-  } catch (err) {
-    console.warn('[AI Moodboard] Error in generateMoodboard, using offline fallback:', err)
+  if (!getApiKey()) {
     return { moodboard: offline, generatedBy: 'offline' }
   }
+
+  try {
+    const raw = await callGemini(buildMoodboardPrompt(brief, extra), true, SYSTEM_PROMPT)
+    const parsed = JSON.parse(raw) as Record<string, unknown>
+    const validated = validateAndMapMoodboard(parsed, offline)
+    if (!validated) {
+      logger.warn('AI Moodboard failed strict validation, using offline preset')
+      return { moodboard: offline, generatedBy: 'offline' }
+    }
+    return { moodboard: validated, generatedBy: 'gemini' }
+  } catch (err) {
+    logger.warn('Gemini moodboard call failed, falling back to offline', { error: String(err) })
+    return { moodboard: offline, generatedBy: 'offline' }
+  }
+}
+
+/**
+ * Rebalance budget categories via AI with deterministic fallback.
+ */
+async function fetchGeminiRebalance(prompt: string): Promise<string | null> {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${getModel()}:generateContent?key=${getApiKey()}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
+      }),
+    },
+  )
+  if (!res.ok) return null
+  const data = (await res.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
+  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? null
 }
 
 export async function rebalanceBudget(
@@ -312,161 +137,22 @@ export async function rebalanceBudget(
   budget: BudgetItem[],
 ): Promise<{ proposal: BudgetRebalanceProposal; ai: boolean }> {
   const offline = generateOfflineBudgetRebalance(brief, budget)
-
-  if (!getApiKey()) {
-    return { proposal: offline, ai: false }
-  }
+  if (!getApiKey()) return { proposal: offline, ai: false }
 
   try {
-    const isContingency = (cat: string) => cat.toLowerCase().includes('contingency')
-    const cur = brief.currency
-    const totalBudget = brief.budget
+    const text = await fetchGeminiRebalance(buildRebalancePrompt(brief, budget))
+    if (!text) return { proposal: offline, ai: false }
 
-    const prompt = `You are an elite event finance consultant for Soirée.
-The client is planning a ${brief.type} in ${brief.city} with a total budget of ${brief.budget} ${cur}.
-Here is the current budget breakdown with verified spend:
-${JSON.stringify(
-  budget.map((b) => ({ id: b.id, category: b.category, allocated: b.allocated, spent: b.spent })),
-  null,
-  2,
-)}
+    const parsed = parseRebalanceResponse(text)
+    if (!parsed) return { proposal: offline, ai: false }
 
-Some categories may have exceeded their allocations. Propose a budget redistribution.
-CRITICAL RULES:
-1. The total of all proposed 'to' amounts across all categories MUST equal exactly ${totalBudget}.
-2. For EVERY category, the new allocation 'to' MUST be greater than or equal to what has already been spent ('spent').
-3. Any category with 'contingency' in the name MUST remain untouched (its 'to' must equal its current 'allocated').
-4. Take funds proportionally from categories that have unspent headroom.
+    const constrained = applyRebalanceConstraints(budget, parsed.changesMap, brief.budget, brief.currency)
+    if (!constrained) return { proposal: offline, ai: false }
 
-Return JSON in this exact structure:
-{
-  "changes": [
-    { "category": "Category Name", "to": 123456, "reason": "Reason for change" }
-  ],
-  "summary": "Executive summary of why this rebalancing keeps the celebration on budget."
-}`
-
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${getModel()}:generateContent?key=${getApiKey()}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.2,
-            responseMimeType: 'application/json',
-          },
-        }),
-      },
-    )
-
-    if (!res.ok) {
-      console.warn(`[AI Budget Rebalance] Gemini returned ${res.status}, falling back to offline`)
-      return { proposal: offline, ai: false }
-    }
-
-    interface GeminiRebalanceResponse {
-      candidates?: Array<{
-        content?: {
-          parts?: Array<{ text?: string }>
-        }
-      }>
-    }
-    const data = (await res.json()) as GeminiRebalanceResponse
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text
-    if (!text) {
-      return { proposal: offline, ai: false }
-    }
-
-    const parsed = JSON.parse(text)
-    if (!parsed || !Array.isArray(parsed.changes)) {
-      return { proposal: offline, ai: false }
-    }
-
-    // Server-side strict validation and clamping
-    const changesMap = new Map<string, { to: number; reason: string }>()
-    for (const c of parsed.changes) {
-      if (typeof c.category === 'string' && typeof c.to === 'number') {
-        changesMap.set(c.category.toLowerCase().trim(), {
-          to: Math.round(c.to),
-          reason: typeof c.reason === 'string' ? c.reason.trim() : '',
-        })
-      }
-    }
-
-    const clampedItems = budget.map((b) => {
-      const contingency = isContingency(b.category)
-      const suggestion = changesMap.get(b.category.toLowerCase().trim())
-      let to = suggestion ? suggestion.to : b.allocated
-      let reason = suggestion?.reason || ''
-
-      // Rule 3: Contingency untouched
-      if (contingency) {
-        to = b.allocated
-        reason = 'Contingency reserve remains untouched as a dedicated emergency cushion.'
-      }
-
-      // Rule 2: Cannot go below spent
-      if (to < b.spent) {
-        to = b.spent
-      }
-
-      return {
-        itemId: b.id,
-        category: b.category,
-        from: b.allocated,
-        spent: b.spent,
-        contingency,
-        to,
-        reason,
-      }
-    })
-
-    // Rule 1: Sum MUST equal brief.budget exactly
-    const currentSum = clampedItems.reduce((s, i) => s + i.to, 0)
-    const diff = totalBudget - currentSum
-
-    if (diff !== 0) {
-      const adjustable = clampedItems
-        .filter((i) => !i.contingency && i.to + diff >= i.spent)
-        .sort((a, b) => b.to - b.spent - (a.to - a.spent))
-
-      if (adjustable.length > 0) {
-        adjustable[0].to += diff
-      } else {
-        return { proposal: offline, ai: false }
-      }
-    }
-
-    for (const item of clampedItems) {
-      if (!item.reason) {
-        if (item.contingency) {
-          item.reason = 'Contingency reserve remains untouched as a dedicated emergency cushion.'
-        } else if (item.to > item.from) {
-          item.reason = `Increased allocation by ${money(item.to - item.from, cur)} to cover verified booking expenses.`
-        } else if (item.to < item.from) {
-          item.reason = `Reallocated ${money(item.from - item.to, cur)} from uncommitted headroom.`
-        } else {
-          item.reason = `Preserved target allocation of ${money(item.to, cur)}.`
-        }
-      }
-    }
-
-    const proposal: BudgetRebalanceProposal = {
-      changes: clampedItems.map((i) => ({
-        itemId: i.itemId,
-        category: i.category,
-        from: i.from,
-        to: i.to,
-        reason: i.reason,
-      })),
-      summary: typeof parsed.summary === 'string' && parsed.summary.trim() ? parsed.summary.trim() : offline.summary,
-    }
-
-    return { proposal, ai: true }
+    if (parsed.summary) constrained.summary = parsed.summary
+    return { proposal: constrained, ai: true }
   } catch (err) {
-    console.warn('[AI Budget Rebalance] Error in rebalanceBudget, falling back to offline:', err)
+    logger.warn('AI rebalanceBudget failed, falling back to offline', { error: String(err) })
     return { proposal: offline, ai: false }
   }
 }

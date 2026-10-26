@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import Wizard from '../components/Wizard'
 import { api } from '../lib/api'
 import type { Plan } from '@soiree/shared'
@@ -53,10 +54,11 @@ describe('Wizard Component Unit & Integration Tests', () => {
   })
 
   it('progresses from step 0 to step 1 upon clicking Continue', async () => {
+    const user = userEvent.setup()
     render(<Wizard onDone={vi.fn()} />)
 
     const continueBtn = screen.getByRole('button', { name: /continue/i })
-    fireEvent.click(continueBtn)
+    await user.click(continueBtn)
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /The essentials/i })).toBeInTheDocument()

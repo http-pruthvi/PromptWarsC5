@@ -11,7 +11,8 @@ export default defineConfig({
       gzipSize: true,
       brotliSize: true,
       open: false,
-    }),
+    }) as unknown as import('vite').PluginOption,
+
     {
       name: 'font-preload',
       transformIndexHtml(_html, ctx) {

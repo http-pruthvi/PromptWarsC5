@@ -20,7 +20,19 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "typecheck": "npm run typecheck -w @soiree/shared && npm run typecheck -w @soiree/server && npm run typecheck -w @soiree/client",
+    "verify": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css,html,yaml,yml}": [
+      "prettier --write"
+    ]
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
@@ -29,7 +41,9 @@
     "concurrently": "^9.1.0",
     "eslint": "^10.13.0",
     "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
     "lighthouse": "^13.5.0",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.9.10",
     "typescript-eslint": "^8.72.0"
   }

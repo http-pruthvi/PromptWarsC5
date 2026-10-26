@@ -1,15 +1,19 @@
-import { motion } from 'framer-motion'
-import { Copy, Music, Palette, RefreshCw, Sparkle, Sparkles, Type, Wand2 } from 'lucide-react'
+import { Palette, RefreshCw, Wand2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { Moodboard, Plan } from '@soiree/shared'
 import { api } from '../../lib/api'
 import { LoopingLotus } from '../Vectors'
+import { MoodboardSwatches } from '../moodboard/MoodboardSwatches'
+import { MoodboardBento } from '../moodboard/MoodboardBento'
 
 interface Props {
   plan: Plan
   toast: (m: string) => void
 }
 
+/**
+ * MoodboardTab renders the aesthetic color story and tactile design bento grid.
+ */
 export default function MoodboardTab({ plan, toast }: Props) {
   const [data, setData] = useState<{ moodboard: Moodboard; generatedBy: string } | null>(null)
   const [loading, setLoading] = useState(true)
@@ -166,174 +170,8 @@ export default function MoodboardTab({ plan, toast }: Props) {
         </div>
       )}
 
-      {/* Palette Swatches */}
-      <div>
-        <div className="swatches-grid">
-          {mb.palette.map((color, idx) => (
-            <motion.div
-              key={color.hex + idx}
-              className="swatch-card"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.08, duration: 0.4 }}
-              onClick={() => copyHex(color.hex, color.name)}
-              role="button"
-              tabIndex={0}
-              aria-label={`Copy hex code for ${color.name}: ${color.hex}`}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  copyHex(color.hex, color.name)
-                }
-              }}
-            >
-              <div className="swatch-color" style={{ backgroundColor: color.hex }}>
-                <span className="swatch-copy-hint">
-                  <Copy size={11} /> Copy Hex
-                </span>
-              </div>
-              <div className="swatch-meta">
-                <span className="swatch-role">{color.role}</span>
-                <span className="swatch-name" title={color.name}>
-                  {color.name}
-                </span>
-                <span className="swatch-hex">
-                  <code>{color.hex.toUpperCase()}</code>
-                  <Copy size={10} style={{ opacity: 0.6 }} />
-                </span>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
-      {/* Bento Grid: Typography, Motifs, Decor, Outfits, Music */}
-      <div className="moodboard-bento">
-        {/* Typography Card */}
-        <div className="mb-card">
-          <div className="mb-card-title">
-            <Type size={16} /> Typography & Calligraphy Pairing
-          </div>
-          <div style={{ display: 'grid', gap: 12 }}>
-            <div
-              style={{
-                padding: '14px 16px',
-                borderRadius: 14,
-                background: 'rgba(247,239,229,.6)',
-                border: '1px solid rgba(196,160,90,.2)',
-              }}
-            >
-              <small
-                style={{
-                  fontSize: 11,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.1em',
-                  color: 'var(--muted)',
-                  display: 'block',
-                  marginBottom: 4,
-                }}
-              >
-                Headline Typeface
-              </small>
-              <div style={{ fontFamily: 'var(--serif)', fontSize: 26, color: 'var(--plum)', fontWeight: 600 }}>
-                {mb.typography.heading}
-              </div>
-            </div>
-            <div
-              style={{
-                padding: '14px 16px',
-                borderRadius: 14,
-                background: 'rgba(247,239,229,.6)',
-                border: '1px solid rgba(196,160,90,.2)',
-              }}
-            >
-              <small
-                style={{
-                  fontSize: 11,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.1em',
-                  color: 'var(--muted)',
-                  display: 'block',
-                  marginBottom: 4,
-                }}
-              >
-                Body & Detail Typeface
-              </small>
-              <div style={{ fontSize: 16, color: 'var(--ink)', fontWeight: 500 }}>{mb.typography.body}</div>
-            </div>
-            <div style={{ fontSize: 13.5, color: 'var(--muted)', fontStyle: 'italic', paddingLeft: 4 }}>
-              Vibe: “{mb.typography.vibe}”
-            </div>
-          </div>
-        </div>
-
-        {/* Motifs Card */}
-        <div className="mb-card">
-          <div className="mb-card-title">
-            <Sparkles size={16} /> Signature Motifs & Symbols
-          </div>
-          <p style={{ fontSize: 13.5, color: 'var(--muted)', margin: 0 }}>
-            Visual emblems and repeating patterns for stationery, signage, and backdrop arches:
-          </p>
-          <div className="mb-chips">
-            {mb.motifs.map((motif, i) => (
-              <span key={i} className="mb-chip">
-                <Sparkle size={12} style={{ color: 'var(--gold)' }} />
-                {motif}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Decor Styling Card */}
-        <div className="mb-card">
-          <div className="mb-card-title">
-            <Sparkles size={16} /> Decor & Spatial Textures
-          </div>
-          <ul className="mb-list">
-            {mb.decor.map((item, i) => (
-              <li key={i}>
-                <span style={{ color: 'var(--gold)', fontWeight: 'bold' }}>✦</span>
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Outfit & Attire Styling Card */}
-        <div className="mb-card">
-          <div className="mb-card-title">
-            <Sparkles size={16} /> Attire, Textiles & Jewelry
-          </div>
-          <ul className="mb-list">
-            {mb.outfitNotes.map((item, i) => (
-              <li key={i}>
-                <span style={{ color: 'var(--gold)', fontWeight: 'bold' }}>✦</span>
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Musical Mood / Playlist Card */}
-        <div className="mb-card" style={{ gridColumn: '1 / -1' }}>
-          <div className="mb-card-title">
-            <Music size={16} /> Soundscape & Playlist Atmospheres
-          </div>
-          <div className="mb-chips">
-            {mb.playlistVibes.map((vib, i) => (
-              <span
-                key={i}
-                className="mb-chip"
-                style={{ background: 'rgba(255,255,255,0.85)', padding: '9px 16px', fontSize: 13.5 }}
-              >
-                <Music size={13} style={{ color: 'var(--gold-deep)' }} />
-                {vib}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
+      <MoodboardSwatches palette={mb.palette} copyHex={copyHex} />
+      <MoodboardBento moodboard={mb} />
     </div>
   )
 }

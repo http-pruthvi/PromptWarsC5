@@ -78,12 +78,16 @@ describe('BudgetTab Component Unit & Integration Tests', () => {
     )
 
     const inputs = screen.getAllByRole('spinbutton')
+    const allocInput = inputs[0]
+    const spentInput = inputs[1]
+    if (!allocInput || !spentInput) throw new Error('Inputs not found')
+
     // First input is allocated for Venue & Decor
-    fireEvent.change(inputs[0], { target: { value: '550000' } })
+    fireEvent.change(allocInput, { target: { value: '550000' } })
     expect(onEditMock).toHaveBeenCalledWith('b1', 'allocated', 550000)
 
     // Second input is spent for Venue & Decor
-    fireEvent.change(inputs[1], { target: { value: '620000' } })
+    fireEvent.change(spentInput, { target: { value: '620000' } })
     expect(onEditMock).toHaveBeenCalledWith('b1', 'spent', 620000)
   })
 

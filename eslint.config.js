@@ -22,7 +22,8 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
-      'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
+      'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
+      complexity: ['error', 10],
     },
   },
 )

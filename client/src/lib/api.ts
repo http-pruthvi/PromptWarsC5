@@ -156,7 +156,13 @@ export const api = {
       ),
     addGuest: (
       planId: string,
-      guest: { name: string; party?: number; status?: GuestStatus; dietary?: DietaryOption; notes?: string },
+      guest: {
+        name: string
+        party?: number | undefined
+        status?: GuestStatus | undefined
+        dietary?: DietaryOption | undefined
+        notes?: string | undefined
+      },
     ) =>
       request<{ guest: Guest }>(`/api/plans/${planId}/guests`, {
         method: 'POST',

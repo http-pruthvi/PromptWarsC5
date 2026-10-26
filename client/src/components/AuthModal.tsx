@@ -10,6 +10,123 @@ interface Props {
   initialMode?: 'login' | 'register'
 }
 
+interface FormProps {
+  mode: 'login' | 'register'
+  email: string
+  password: string
+  busy: boolean
+  setEmail: (val: string) => void
+  setPassword: (val: string) => void
+  onSubmit: (e: React.FormEvent) => void
+}
+
+function GuestDemoBanner({ onGuest, busy }: { onGuest: () => void; busy: boolean }) {
+  return (
+    <div
+      style={{
+        marginBottom: 22,
+        padding: 14,
+        background: 'rgba(197, 160, 89, 0.08)',
+        borderRadius: 14,
+        border: '1px solid rgba(197, 160, 89, 0.25)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <span
+          style={{ fontSize: 13, fontWeight: 600, color: '#8c6b2d', display: 'flex', alignItems: 'center', gap: 6 }}
+        >
+          <Sparkles size={14} /> Evaluation & Instant Demo
+        </span>
+        <span className="badge local" style={{ fontSize: 11, padding: '2px 6px' }}>
+          Zero-Config
+        </span>
+      </div>
+      <p style={{ fontSize: 12, color: 'var(--text)', opacity: 0.85, margin: '0 0 10px 0' }}>
+        Judging or testing? Skip registration and enter immediately as a guest. All features and plans persist in
+        SQLite.
+      </p>
+      <button
+        type="button"
+        className="btn btn-primary"
+        style={{ width: '100%', justifyContent: 'center' }}
+        onClick={onGuest}
+        disabled={busy}
+      >
+        <UserCheck size={16} /> Continue as Guest (1-Click)
+      </button>
+    </div>
+  )
+}
+
+function AuthForm({ mode, email, password, busy, setEmail, setPassword, onSubmit }: FormProps) {
+  const isRegister = mode === 'register'
+  return (
+    <form onSubmit={onSubmit}>
+      <div className="field full" style={{ marginBottom: 12 }}>
+        <label htmlFor="auth-email" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Mail size={13} /> Email Address
+        </label>
+        <input
+          id="auth-email"
+          type="email"
+          className="input"
+          placeholder="you@domain.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          autoComplete="email"
+        />
+      </div>
+
+      <div className="field full" style={{ marginBottom: 18 }}>
+        <label htmlFor="auth-pass" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Lock size={13} /> Password
+        </label>
+        <input
+          id="auth-pass"
+          type="password"
+          className="input"
+          placeholder={isRegister ? 'At least 6 characters' : 'Enter password'}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          minLength={isRegister ? 6 : 1}
+          autoComplete={isRegister ? 'new-password' : 'current-password'}
+        />
+      </div>
+
+      <button
+        type="submit"
+        className="btn btn-primary"
+        style={{ width: '100%', justifyContent: 'center' }}
+        disabled={busy}
+      >
+        {busy ? 'Please wait…' : isRegister ? 'Create Account' : 'Sign In'}
+        {!busy && <ArrowRight size={16} />}
+      </button>
+    </form>
+  )
+}
+
+function AuthModalHeader({ mode }: { mode: 'login' | 'register' }) {
+  const isLogin = mode === 'login'
+  return (
+    <div style={{ textAlign: 'center', marginBottom: 20 }}>
+      <span className="badge" style={{ marginBottom: 10 }}>
+        Personal Event Concierge
+      </span>
+      <h3 id="auth-modal-title" style={{ fontFamily: 'var(--serif)', fontSize: 32, marginBottom: 6 }}>
+        {isLogin ? 'Welcome back to Soirée' : 'Begin your celebration'}
+      </h3>
+      <p style={{ color: 'var(--muted)', fontSize: 14 }}>
+        {isLogin
+          ? 'Access your saved luxury event plans & timelines'
+          : 'Create an account to save and orchestrate events'}
+      </p>
+    </div>
+  )
+}
+
 export default function AuthModal({ onSuccess, onClose, initialMode = 'login' }: Props) {
   const shouldReduceMotion = useReducedMotion()
   const [mode, setMode] = useState<'login' | 'register'>(initialMode)
@@ -22,15 +139,9 @@ export default function AuthModal({ onSuccess, onClose, initialMode = 'login' }:
     e.preventDefault()
     setError(null)
     setBusy(true)
-
     try {
-      if (mode === 'register') {
-        const res = await api.auth.register(email, password)
-        onSuccess(res.user)
-      } else {
-        const res = await api.auth.login(email, password)
-        onSuccess(res.user)
-      }
+      const res = mode === 'register' ? await api.auth.register(email, password) : await api.auth.login(email, password)
+      onSuccess(res.user)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Authentication failed. Please check your credentials.')
     } finally {
@@ -58,7 +169,7 @@ export default function AuthModal({ onSuccess, onClose, initialMode = 'login' }:
         onClick={(e) => e.stopPropagation()}
         initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.95, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={shouldReduceMotion ? undefined : { opacity: 0, scale: 0.95, y: 16 }}
+        {...(!shouldReduceMotion ? { exit: { opacity: 0, scale: 0.95, y: 16 } } : {})}
         transition={{ duration: shouldReduceMotion ? 0 : 0.3, ease: [0.22, 1, 0.36, 1] }}
         style={{ maxWidth: 460, position: 'relative' }}
       >
@@ -73,54 +184,9 @@ export default function AuthModal({ onSuccess, onClose, initialMode = 'login' }:
           </button>
         )}
 
-        <div style={{ textAlign: 'center', marginBottom: 20 }}>
-          <span className="badge" style={{ marginBottom: 10 }}>
-            Personal Event Concierge
-          </span>
-          <h3 id="auth-modal-title" style={{ fontFamily: 'var(--serif)', fontSize: 32, marginBottom: 6 }}>
-            {mode === 'login' ? 'Welcome back to Soirée' : 'Begin your celebration'}
-          </h3>
-          <p style={{ color: 'var(--muted)', fontSize: 14 }}>
-            {mode === 'login'
-              ? 'Access your saved luxury event plans & timelines'
-              : 'Create an account to save and orchestrate events'}
-          </p>
-        </div>
+        <AuthModalHeader mode={mode} />
 
-        {/* 1-Click Guest Access for Judges */}
-        <div
-          style={{
-            marginBottom: 22,
-            padding: 14,
-            background: 'rgba(197, 160, 89, 0.08)',
-            borderRadius: 14,
-            border: '1px solid rgba(197, 160, 89, 0.25)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span
-              style={{ fontSize: 13, fontWeight: 600, color: '#8c6b2d', display: 'flex', alignItems: 'center', gap: 6 }}
-            >
-              <Sparkles size={14} /> Evaluation & Instant Demo
-            </span>
-            <span className="badge local" style={{ fontSize: 11, padding: '2px 6px' }}>
-              Zero-Config
-            </span>
-          </div>
-          <p style={{ fontSize: 12, color: 'var(--text)', opacity: 0.85, margin: '0 0 10px 0' }}>
-            Judging or testing? Skip registration and enter immediately as a guest. All features and plans persist in
-            SQLite.
-          </p>
-          <button
-            type="button"
-            className="btn btn-primary"
-            style={{ width: '100%', justifyContent: 'center' }}
-            onClick={handleGuest}
-            disabled={busy}
-          >
-            <UserCheck size={16} /> Continue as Guest (1-Click)
-          </button>
-        </div>
+        <GuestDemoBanner onGuest={handleGuest} busy={busy} />
 
         <div style={{ display: 'flex', alignItems: 'center', margin: '16px 0', gap: 12 }}>
           <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
@@ -130,7 +196,6 @@ export default function AuthModal({ onSuccess, onClose, initialMode = 'login' }:
           <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
         </div>
 
-        {/* Tabs: Sign In / Create Account */}
         <div className="tabs" style={{ marginBottom: 16 }}>
           <button
             type="button"
@@ -177,50 +242,15 @@ export default function AuthModal({ onSuccess, onClose, initialMode = 'login' }:
           )}
         </AnimatePresence>
 
-        <form onSubmit={handleSubmit}>
-          <div className="field full" style={{ marginBottom: 12 }}>
-            <label htmlFor="auth-email" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Mail size={13} /> Email Address
-            </label>
-            <input
-              id="auth-email"
-              type="email"
-              className="input"
-              placeholder="you@domain.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-          </div>
-
-          <div className="field full" style={{ marginBottom: 18 }}>
-            <label htmlFor="auth-pass" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Lock size={13} /> Password
-            </label>
-            <input
-              id="auth-pass"
-              type="password"
-              className="input"
-              placeholder={mode === 'register' ? 'At least 6 characters' : 'Enter password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={mode === 'register' ? 6 : 1}
-              autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="btn btn-primary"
-            style={{ width: '100%', justifyContent: 'center' }}
-            disabled={busy}
-          >
-            {busy ? 'Please wait…' : mode === 'login' ? 'Sign In' : 'Create Account'}
-            {!busy && <ArrowRight size={16} />}
-          </button>
-        </form>
+        <AuthForm
+          mode={mode}
+          email={email}
+          password={password}
+          busy={busy}
+          setEmail={setEmail}
+          setPassword={setPassword}
+          onSubmit={handleSubmit}
+        />
       </motion.div>
     </div>
   )

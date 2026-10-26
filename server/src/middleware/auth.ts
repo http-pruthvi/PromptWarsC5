@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
+import { UnauthorizedError } from '../errors/index.js'
 
 export interface AuthenticatedUser {
   id: string
@@ -79,4 +80,16 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     clearAuthCookie(res)
     return res.status(401).json({ error: 'Session expired or invalid. Please sign in again.' })
   }
+}
+
+/**
+ * Safely extracts the authenticated user ID guaranteed by requireAuth middleware.
+ *
+ * @throws {UnauthorizedError} if user is not attached to request
+ */
+export function getAuthUserId(req: Request): string {
+  if (!req.user) {
+    throw new UnauthorizedError('Authentication required')
+  }
+  return req.user.id
 }

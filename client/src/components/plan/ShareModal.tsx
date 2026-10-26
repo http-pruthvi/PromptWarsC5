@@ -15,7 +15,89 @@ interface Props {
   copyShareLink: () => void
 }
 
+function SharePrivacyNotice() {
+  return (
+    <div
+      style={{
+        background: 'rgba(247,239,229,0.7)',
+        border: '1px solid rgba(196,160,90,0.25)',
+        borderRadius: 14,
+        padding: '14px 16px',
+        marginBottom: 20,
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          fontSize: 12,
+          fontWeight: 600,
+          color: 'var(--gold-deep)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.08em',
+          marginBottom: 8,
+        }}
+      >
+        <ShieldCheck size={16} /> Privacy & Visibility Notice
+      </div>
+      <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: 'var(--ink)', lineHeight: 1.5 }}>
+        <li>
+          <b>Visible to viewers:</b> Title, event date, city, celebration overview, milestone timeline, vendor category
+          statuses, creative ideas, and aesthetic moodboard.
+        </li>
+        <li style={{ marginTop: 4 }}>
+          <b>Confidential (Hidden):</b> Exact budget allocations, spend tracking, confidential notes, chat history, and
+          account email.
+        </li>
+      </ul>
+    </div>
+  )
+}
+
+function ShareLinkControls({ token, onCopy }: { token: string; onCopy: () => void }) {
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  return (
+    <div style={{ display: 'grid', gap: 8 }}>
+      <label
+        style={{
+          fontSize: 12,
+          textTransform: 'uppercase',
+          letterSpacing: '0.08em',
+          color: 'var(--muted)',
+          fontWeight: 600,
+        }}
+      >
+        Shareable URL
+      </label>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input
+          readOnly
+          className="input"
+          aria-label="Shareable URL"
+          value={`${origin}/#/share/${token}`}
+          style={{ fontSize: 13, padding: '10px 14px' }}
+        />
+        <button className="btn btn-secondary" onClick={onCopy} style={{ gap: 6, whiteSpace: 'nowrap' }}>
+          <Copy size={15} /> Copy
+        </button>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+        <a
+          href={`/#/share/${token}`}
+          target="_blank"
+          rel="noreferrer"
+          style={{ fontSize: 12.5, color: 'var(--gold-deep)', textDecoration: 'underline' }}
+        >
+          Preview public view ↗
+        </a>
+      </div>
+    </div>
+  )
+}
+
 export function ShareModal({ show, onClose, shareData, busyShare, toggleShareEnabled, copyShareLink }: Props) {
+  const isEnabled = Boolean(shareData?.shareEnabled)
   return (
     <AnimatePresence>
       {show && (
@@ -55,49 +137,7 @@ export function ShareModal({ show, onClose, shareData, busyShare, toggleShareEna
               Generate an elegant, read-only link to share with loved ones, co-hosts, or vendors.
             </p>
 
-            <div
-              style={{
-                background: 'rgba(247,239,229,0.7)',
-                border: '1px solid rgba(196,160,90,0.25)',
-                borderRadius: 14,
-                padding: '14px 16px',
-                marginBottom: 20,
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: 'var(--gold-deep)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  marginBottom: 8,
-                }}
-              >
-                <ShieldCheck size={16} /> Privacy & Visibility Notice
-              </div>
-              <ul
-                style={{
-                  margin: 0,
-                  paddingLeft: 18,
-                  fontSize: 13,
-                  color: 'var(--ink)',
-                  lineHeight: 1.5,
-                }}
-              >
-                <li>
-                  <b>Visible to viewers:</b> Title, event date, city, celebration overview, milestone timeline, vendor
-                  category statuses, creative ideas, and aesthetic moodboard.
-                </li>
-                <li style={{ marginTop: 4 }}>
-                  <b>Confidential (Hidden):</b> Exact budget allocations, spend tracking, confidential notes, chat
-                  history, and account email.
-                </li>
-              </ul>
-            </div>
+            <SharePrivacyNotice />
 
             <div style={{ display: 'grid', gap: 14 }}>
               <div
@@ -114,68 +154,24 @@ export function ShareModal({ show, onClose, shareData, busyShare, toggleShareEna
                 <div>
                   <span style={{ fontWeight: 600, fontSize: 14, display: 'block' }}>Public Link Access</span>
                   <small style={{ color: 'var(--muted)', fontSize: 12 }}>
-                    {shareData?.shareEnabled
-                      ? 'Link is active and accessible'
-                      : 'Link is currently revoked and inactive'}
+                    {isEnabled ? 'Link is active and accessible' : 'Link is currently revoked and inactive'}
                   </small>
                 </div>
                 <button
-                  className={`btn btn-sm ${shareData?.shareEnabled ? 'btn-secondary' : 'btn-primary'}`}
+                  className={`btn btn-sm ${isEnabled ? 'btn-secondary' : 'btn-primary'}`}
                   onClick={toggleShareEnabled}
                   disabled={busyShare}
                   style={{
                     minWidth: 100,
-                    color: shareData?.shareEnabled ? 'var(--ink)' : '#fffaf0',
+                    color: isEnabled ? 'var(--ink)' : '#fffaf0',
                   }}
                 >
-                  {shareData?.shareEnabled ? 'Revoke link' : 'Enable link'}
+                  {isEnabled ? 'Revoke link' : 'Enable link'}
                 </button>
               </div>
 
-              {shareData?.shareEnabled && shareData.shareToken && (
-                <div style={{ display: 'grid', gap: 8 }}>
-                  <label
-                    style={{
-                      fontSize: 12,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.08em',
-                      color: 'var(--muted)',
-                      fontWeight: 600,
-                    }}
-                  >
-                    Shareable URL
-                  </label>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input
-                      readOnly
-                      className="input"
-                      aria-label="Shareable URL"
-                      value={`${window.location.origin}/#/share/${shareData.shareToken}`}
-                      style={{ fontSize: 13, padding: '10px 14px' }}
-                    />
-                    <button
-                      className="btn btn-secondary"
-                      onClick={copyShareLink}
-                      style={{ gap: 6, whiteSpace: 'nowrap' }}
-                    >
-                      <Copy size={15} /> Copy
-                    </button>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
-                    <a
-                      href={`/#/share/${shareData.shareToken}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{
-                        fontSize: 12.5,
-                        color: 'var(--gold-deep)',
-                        textDecoration: 'underline',
-                      }}
-                    >
-                      Preview public view ↗
-                    </a>
-                  </div>
-                </div>
+              {isEnabled && shareData?.shareToken && (
+                <ShareLinkControls token={shareData.shareToken} onCopy={copyShareLink} />
               )}
             </div>
           </motion.div>

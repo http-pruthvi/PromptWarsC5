@@ -10,7 +10,7 @@ const Wizard = React.lazy(() => import('./Wizard'))
 const PlanView = React.lazy(() => import('./PlanView'))
 
 interface Props {
-  presetType?: EventType
+  presetType?: EventType | undefined
   user: User | null
   onRequireAuth: () => void
   toast: (m: string) => void

@@ -3,6 +3,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { app } from './app.js'
 import { initDb } from './db/index.js'
+export * from './errors/index.js'
 
 import { DEFAULT_JWT_SECRET } from './middleware/auth.js'
 

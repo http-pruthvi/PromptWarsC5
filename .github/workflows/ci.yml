@@ -12,12 +12,19 @@ concurrency:
 
 jobs:
   validate:
-    name: Lint, Typecheck, Build & Test
+    name: Lint, Typecheck, Test, Build, Audit & Secret Scan
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Secret Scan (Gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
@@ -34,8 +41,14 @@ jobs:
       - name: Run strict ESLint
         run: npm run lint
 
+      - name: Run TypeScript typecheck
+        run: npm run typecheck
+
+      - name: Run test suite with coverage
+        run: npm test
+
       - name: Build packages (Shared, Server, Client)
         run: npm run build
 
-      - name: Run test suite
-        run: npm test
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high

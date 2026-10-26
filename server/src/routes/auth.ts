@@ -2,7 +2,7 @@ import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 import { getDb } from '../db/index.js'
-import { clearAuthCookie, requireAuth, setAuthCookie } from '../middleware/auth.js'
+import { clearAuthCookie, getAuthUserId, requireAuth, setAuthCookie } from '../middleware/auth.js'
 import { uid } from '../services/generator.js'
 
 export const authRouter = Router()
@@ -114,8 +114,9 @@ authRouter.post('/guest', (_req, res, next) => {
 authRouter.get('/me', requireAuth, (req, res, next) => {
   try {
     const db = getDb()
-    const userRow = db.prepare('SELECT id, email, is_guest, created_at FROM users WHERE id = ?').get(req.user!.id) as
-      UserRow | undefined
+    const userRow = db
+      .prepare('SELECT id, email, is_guest, created_at FROM users WHERE id = ?')
+      .get(getAuthUserId(req)) as UserRow | undefined
     if (!userRow) {
       clearAuthCookie(res)
       return res.status(401).json({ error: 'User not found' })
