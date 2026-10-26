@@ -51,6 +51,7 @@
 }
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 body {
   margin: 0;
@@ -59,6 +60,7 @@ body {
   background: var(--cream);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 body::before {
   content: '';
@@ -2801,8 +2803,30 @@ body {
 /* ==================== performance & a11y ==================== */
 .is-paused,
 .is-paused *,
-body.tab-hidden * {
+body.tab-hidden *,
+html.animations-paused *,
+body.animations-paused *,
+.animations-paused * {
   animation-play-state: paused !important;
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
+@media (max-width: 480px) {
+  .wrap {
+    width: min(100% - 20px, 1180px);
+  }
+}
+
+@media (max-width: 360px) {
+  .wrap {
+    width: min(100% - 16px, 1180px);
+  }
+  .btn {
+    padding: 10px 16px;
+    font-size: 13.5px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

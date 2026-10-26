@@ -1,7 +1,9 @@
+import { MotionConfig } from 'framer-motion'
 import { Navbar } from './components/Navbar'
 import { Petals, Toast } from './components/common'
 import { ScrollVine, VectorDefs } from './components/Vectors'
 import { useAppState } from './hooks/useAppState'
+import { useMotionControl } from './hooks/useMotionControl'
 import { AppContent } from './components/app/AppContent'
 
 /**
@@ -9,9 +11,10 @@ import { AppContent } from './components/app/AppContent'
  */
 export default function App() {
   const s = useAppState()
+  const { motionPaused, toggleMotion } = useMotionControl()
 
   return (
-    <>
+    <MotionConfig reducedMotion={motionPaused ? 'always' : 'user'}>
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>
@@ -24,6 +27,8 @@ export default function App() {
         user={s.user}
         onOpenAuth={() => s.setShowAuth(true)}
         onLogout={s.handleLogout}
+        motionPaused={motionPaused}
+        onToggleMotion={toggleMotion}
       />
 
       <main id="main-content" tabIndex={-1} style={{ outline: 'none' }}>
@@ -43,6 +48,6 @@ export default function App() {
       </main>
 
       <Toast message={s.toastMsg} />
-    </>
+    </MotionConfig>
   )
 }

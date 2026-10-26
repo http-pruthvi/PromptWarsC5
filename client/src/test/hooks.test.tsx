@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useShareModal } from '../hooks/useShareModal.js'
 import { useAppState, readRoute } from '../hooks/useAppState.js'
+import { useMotionControl } from '../hooks/useMotionControl.js'
 import { api } from '../lib/api.js'
 
 describe('Custom Hooks: useShareModal and useAppState Suite', () => {
@@ -109,5 +110,25 @@ describe('Custom Hooks: useShareModal and useAppState Suite', () => {
       await result.current.handleLogout()
     })
     expect(result.current.user).toBeNull()
+  })
+
+  it('manages useMotionControl state, localStorage persistence, and DOM classes', () => {
+    localStorage.clear()
+    const { result } = renderHook(() => useMotionControl())
+    expect(result.current.motionPaused).toBe(false)
+    expect(document.documentElement.classList.contains('animations-paused')).toBe(false)
+
+    act(() => {
+      result.current.toggleMotion()
+    })
+    expect(result.current.motionPaused).toBe(true)
+    expect(document.documentElement.classList.contains('animations-paused')).toBe(true)
+    expect(localStorage.getItem('soiree_motion_paused')).toBe('true')
+
+    act(() => {
+      result.current.toggleMotion()
+    })
+    expect(result.current.motionPaused).toBe(false)
+    expect(document.documentElement.classList.contains('animations-paused')).toBe(false)
   })
 })

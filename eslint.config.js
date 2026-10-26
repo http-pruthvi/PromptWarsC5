@@ -16,6 +16,8 @@ export default tseslint.config(
       '**/*.json',
       'docs/**',
       '.planning/**',
+      'scripts/**',
+      'test-results/**',
     ],
   },
   {

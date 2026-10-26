@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, LogIn, LogOut, Menu, User as UserIcon, X } from 'lucide-react'
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
+import { ArrowRight, LogIn, LogOut, Menu, User as UserIcon, X, Pause, Play } from 'lucide-react'
 import { Logo } from './common'
 import type { User } from '@soiree/shared'
 import { NavMobileDrawer } from './navbar/NavMobileDrawer'
+import { useDrawerFocusTrap } from './navbar/useDrawerFocusTrap'
 
 export type Route = 'home' | 'planner' | 'share'
 
@@ -12,34 +13,35 @@ interface Props {
   user: User | null
   onOpenAuth: () => void
   onLogout: () => void
+  motionPaused?: boolean | undefined
+  onToggleMotion?: (() => void) | undefined
 }
 
-function useDrawerFocusTrap(open: boolean, drawerRef: React.RefObject<HTMLDivElement | null>) {
+function useNavState(route: Route) {
+  const [scrolled, setScrolled] = useState(false)
+  const [open, setOpen] = useState(false)
+  const drawerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const on = () => setScrolled(window.scrollY > 40)
+    on()
+    window.addEventListener('scroll', on, { passive: true })
+    return () => window.removeEventListener('scroll', on)
+  }, [])
+
   useEffect(() => {
     if (!open) return
-    const drawer = drawerRef.current
-    if (!drawer) return
-    const focusable = drawer.querySelectorAll<HTMLElement>(
-      'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
-    )
-    if (focusable.length > 0) focusable[0]?.focus()
-
-    const handleTab = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab') return
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault()
-        last?.focus()
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault()
-        first?.focus()
-      }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
     }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
 
-    drawer.addEventListener('keydown', handleTab)
-    return () => drawer.removeEventListener('keydown', handleTab)
-  }, [open, drawerRef])
+  useDrawerFocusTrap(open, drawerRef)
+
+  const isScrolled = scrolled || route === 'planner'
+  return { open, setOpen, drawerRef, isScrolled }
 }
 
 function NavUserBadge({
@@ -76,51 +78,118 @@ function NavUserBadge({
   )
 }
 
+function NavMotionToggle({
+  motionPaused,
+  onToggleMotion,
+}: {
+  motionPaused: boolean
+  onToggleMotion?: (() => void) | undefined
+}) {
+  if (!onToggleMotion) return null
+  const label = motionPaused ? 'Resume animations' : 'Pause animations'
+  return (
+    <button
+      type="button"
+      className="btn btn-ghost btn-sm"
+      onClick={onToggleMotion}
+      aria-label={label}
+      title={label}
+      aria-pressed={motionPaused}
+      style={{ padding: '6px 10px', display: 'flex', alignItems: 'center' }}
+    >
+      {motionPaused ? <Play size={15} /> : <Pause size={15} />}
+    </button>
+  )
+}
+
+function NavRouteButton({ route, go }: { route: Route; go: (r: Route) => void }) {
+  if (route === 'home') {
+    return (
+      <button className="btn btn-primary btn-sm" onClick={() => go('planner')}>
+        Start planning <ArrowRight size={16} />
+      </button>
+    )
+  }
+  return (
+    <button className="btn btn-ghost btn-sm" onClick={() => go('home')}>
+      Back to home
+    </button>
+  )
+}
+
+function NavLinks({ navigateTo }: { navigateTo: (anchor: string) => void }) {
+  const items: Array<{ id: string; label: string }> = [
+    { id: 'features', label: 'Features' },
+    { id: 'how', label: 'How it works' },
+    { id: 'occasions', label: 'Occasions' },
+    { id: 'preview', label: 'Preview' },
+  ]
+  return (
+    <nav className="nav-links" aria-label="Primary">
+      {items.map(({ id, label }) => (
+        <a
+          key={id}
+          href={`#/${id}`}
+          onClick={(e) => {
+            e.preventDefault()
+            navigateTo(id)
+          }}
+        >
+          {label}
+        </a>
+      ))}
+    </nav>
+  )
+}
+
+function NavHeaderActions({
+  user,
+  onLogout,
+  onOpenAuth,
+  motionPaused,
+  onToggleMotion,
+  route,
+  go,
+  open,
+  setOpen,
+}: {
+  user: User | null
+  onLogout: () => void
+  onOpenAuth: () => void
+  motionPaused: boolean
+  onToggleMotion?: (() => void) | undefined
+  route: Route
+  go: (r: Route) => void
+  open: boolean
+  setOpen: Dispatch<SetStateAction<boolean>>
+}) {
+  return (
+    <div className="nav-actions" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <NavUserBadge user={user} onLogout={onLogout} onOpenAuth={onOpenAuth} />
+      <NavMotionToggle motionPaused={motionPaused} onToggleMotion={onToggleMotion} />
+      <NavRouteButton route={route} go={go} />
+      <button
+        className="nav-burger"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={open ? 'Close navigation menu' : 'Open navigation menu'}
+        aria-expanded={open}
+        aria-controls="mobile-nav-drawer"
+      >
+        {open ? <X size={20} /> : <Menu size={20} />}
+      </button>
+    </div>
+  )
+}
+
 /**
  * Global navigation header for Soirée with responsive links and mobile drawer.
  */
-export function Navbar({ route, go, user, onOpenAuth, onLogout }: Props) {
-  const [scrolled, setScrolled] = useState(false)
-  const [open, setOpen] = useState(false)
-  const drawerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const on = () => setScrolled(window.scrollY > 40)
-    on()
-    window.addEventListener('scroll', on, { passive: true })
-    return () => window.removeEventListener('scroll', on)
-  }, [])
-
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open])
-
-  useDrawerFocusTrap(open, drawerRef)
-
+export function Navbar({ route, go, user, onOpenAuth, onLogout, motionPaused = false, onToggleMotion }: Props) {
+  const { open, setOpen, drawerRef, isScrolled } = useNavState(route)
   const navigateTo = (anchor?: string) => {
     setOpen(false)
     go('home', anchor)
   }
-
-  const link = (label: string, id: string) => (
-    <a
-      key={id}
-      href={`#/${id}`}
-      onClick={(e) => {
-        e.preventDefault()
-        navigateTo(id)
-      }}
-    >
-      {label}
-    </a>
-  )
-
-  const isScrolled = scrolled || route === 'planner'
 
   return (
     <>
@@ -129,35 +198,18 @@ export function Navbar({ route, go, user, onOpenAuth, onLogout }: Props) {
           <button className="brand" onClick={() => navigateTo()} aria-label="Soirée home">
             <Logo /> Soirée
           </button>
-          <nav className="nav-links" aria-label="Primary">
-            {link('Features', 'features')}
-            {link('How it works', 'how')}
-            {link('Occasions', 'occasions')}
-            {link('Preview', 'preview')}
-          </nav>
-          <div className="nav-actions" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <NavUserBadge user={user} onLogout={onLogout} onOpenAuth={onOpenAuth} />
-
-            {route === 'home' ? (
-              <button className="btn btn-primary btn-sm" onClick={() => go('planner')}>
-                Start planning <ArrowRight size={16} />
-              </button>
-            ) : (
-              <button className="btn btn-ghost btn-sm" onClick={() => go('home')}>
-                Back to home
-              </button>
-            )}
-
-            <button
-              className="nav-burger"
-              onClick={() => setOpen((o) => !o)}
-              aria-label={open ? 'Close navigation menu' : 'Open navigation menu'}
-              aria-expanded={open}
-              aria-controls="mobile-nav-drawer"
-            >
-              {open ? <X size={20} /> : <Menu size={20} />}
-            </button>
-          </div>
+          <NavLinks navigateTo={navigateTo} />
+          <NavHeaderActions
+            user={user}
+            onLogout={onLogout}
+            onOpenAuth={onOpenAuth}
+            motionPaused={motionPaused}
+            onToggleMotion={onToggleMotion}
+            route={route}
+            go={go}
+            open={open}
+            setOpen={setOpen}
+          />
         </div>
       </header>
 
@@ -171,6 +223,8 @@ export function Navbar({ route, go, user, onOpenAuth, onLogout }: Props) {
         onOpenAuth={onOpenAuth}
         onLogout={onLogout}
         navigateTo={navigateTo}
+        motionPaused={motionPaused}
+        onToggleMotion={onToggleMotion}
       />
     </>
   )

@@ -13,6 +13,23 @@ test.describe('Soirée End-to-End Smoke Test & Axe Accessibility Audit', () => {
     await expect(skipLink).toBeAttached()
     await expect(skipLink).toHaveAttribute('href', '#main-content')
 
+    // Verify Pause animation toggle (WCAG 2.2.2)
+    const pauseMotionBtn = page.getByRole('button', { name: /Pause animations/i })
+    await expect(pauseMotionBtn).toBeVisible()
+    await pauseMotionBtn.click()
+    await expect(page.locator('html')).toHaveClass(/animations-paused/)
+    const resumeMotionBtn = page.getByRole('button', { name: /Resume animations/i })
+    await expect(resumeMotionBtn).toBeVisible()
+    await resumeMotionBtn.click()
+    await expect(page.locator('html')).not.toHaveClass(/animations-paused/)
+
+    // Verify 320px viewport reflow without horizontal scroll
+    await page.setViewportSize({ width: 320, height: 640 })
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth)
+    const clientWidth = await page.evaluate(() => document.documentElement.clientWidth)
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth)
+    await page.setViewportSize({ width: 1280, height: 800 })
+
     // Accessibility Audit: Landing Page
     const landingAxe = await new AxeBuilder({ page }).analyze()
     expect(landingAxe.violations).toEqual([])

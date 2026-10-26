@@ -17,6 +17,7 @@
     "start": "npm run start -w @soiree/server",
     "test": "npm run test -w @soiree/server && npm run test -w @soiree/client",
     "test:e2e": "playwright test",
+    "audit:a11y": "node scripts/run-lighthouse.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
