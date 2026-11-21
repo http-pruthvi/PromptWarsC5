@@ -66,3 +66,7 @@ coverage/
 */coverage/
 test-results/
 playwright-report/
+
+# Security & SARIF reports
+results.sarif
+*.sarif

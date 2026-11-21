@@ -1,0 +1,29 @@
+# Package managers & dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+out/
+*.tsbuildinfo
+.planning/
+
+# SQLite databases
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+server/data/
+
+# Security & SARIF scan outputs
+results.sarif
+*.sarif
+docs/*.json
+
+# Test outputs & coverage
+coverage/
+*/coverage/
+test-results/
+playwright-report/
